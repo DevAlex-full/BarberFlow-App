@@ -26,13 +26,15 @@ export default function LoginScreen() {
   const [error,    setError]    = useState('');
   const [mode, setMode] = useState<'barbeiro' | 'cliente'>('barbeiro');
 
-  // Fundo muda conforme o modo selecionado
   const bgImage = mode === 'barbeiro'
     ? require('@/assets/images/fundo1.png')
     : require('@/assets/images/fundo4.jpg');
 
   async function handleLogin() {
-    if (!email || !password) {
+    const emailClean = email.trim().toLowerCase();
+    const passClean  = password.trim();
+
+    if (!emailClean || !passClean) {
       setError('Preencha e-mail e senha.');
       return;
     }
@@ -41,11 +43,11 @@ export default function LoginScreen() {
 
     try {
       if (mode === 'barbeiro') {
-        await barberSignIn(email, password);
+        await barberSignIn(emailClean, passClean);
         router.replace('/(barbeiro)');
       } else {
         const { clientSignIn } = useAuthStore.getState();
-        await clientSignIn(email, password);
+        await clientSignIn(emailClean, passClean);
         router.replace('/(cliente)');
       }
     } catch (err: any) {
@@ -127,6 +129,8 @@ export default function LoginScreen() {
               value={password}
               onChangeText={setPassword}
               secureTextEntry
+              autoCorrect={false}
+              autoCapitalize="none"
             />
 
             {/* Botão Acessar */}

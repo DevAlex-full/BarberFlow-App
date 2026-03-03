@@ -8,7 +8,7 @@ import { router } from 'expo-router';
 import api from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 import { Colors, Spacing, BorderRadius, Shadow } from '@/constants/colors';
-import { getPlanById } from '@/lib/plans';
+import { getPlanById, formatPrice, getPlanBadgeColor, trialPlan } from '@/lib/plans';
 
 export default function ConfiguracoesScreen() {
   const { barberUser, barberSignOut } = useAuthStore();
@@ -54,7 +54,16 @@ export default function ConfiguracoesScreen() {
     ]);
   }
 
-  const plan = getPlanById(userData?.barbershop?.plan || 'trial');
+  // Plano atual — suporta trial e planos pagos
+  const planId    = userData?.barbershop?.plan || 'trial';
+  const plan      = getPlanById(planId);
+  const isTrial   = planId === 'trial' || !plan;
+  const planColor = getPlanBadgeColor(planId);
+
+  // Preço mensal do plano atual (intervalo mensal por padrão)
+  const planPriceText = isTrial
+    ? 'Grátis — 15 dias'
+    : `${formatPrice(plan!.prices.monthly.perMonth)}/mês`;
 
   if (loading) {
     return (
@@ -98,13 +107,26 @@ export default function ConfiguracoesScreen() {
           <Ionicons name="card-outline" size={22} color={Colors.primary} />
           <Text style={styles.cardTitle}>Plano Atual</Text>
         </View>
-        <View style={styles.planBox}>
-          <Text style={styles.planName}>{plan?.name || 'Trial'}</Text>
-          <Text style={styles.planPrice}>
-            {plan?.price === 0 ? 'Grátis' : `R$ ${plan?.price.toFixed(2)}/mês`}
-          </Text>
+        <View style={[styles.planBox, { borderLeftColor: planColor }]}>
+          <View style={styles.planBadge}>
+            <View style={[styles.planDot, { backgroundColor: planColor }]} />
+            <Text style={[styles.planName, { color: planColor }]}>
+              {isTrial ? trialPlan.name : plan!.name}
+            </Text>
+          </View>
+          <Text style={styles.planPrice}>{planPriceText}</Text>
+          {!isTrial && (
+            <View style={styles.planDetails}>
+              <Text style={styles.planDetailText}>
+                Semestral: {formatPrice(plan!.prices.semiannual.perMonth)}/mês
+                {'  '}•{'  '}
+                Anual: {formatPrice(plan!.prices.annual.perMonth)}/mês
+              </Text>
+            </View>
+          )}
         </View>
         <TouchableOpacity style={styles.btnOutline} onPress={() => router.push('/(barbeiro)/planos')}>
+          <Ionicons name="arrow-up-circle-outline" size={18} color={Colors.primary} />
           <Text style={styles.btnOutlineText}>Ver Planos</Text>
         </TouchableOpacity>
       </View>
@@ -116,10 +138,10 @@ export default function ConfiguracoesScreen() {
           <Text style={styles.cardTitle}>Mais opções</Text>
         </View>
         {[
-          { icon: 'cut-outline',        label: 'Serviços',     route: '/(barbeiro)/servicos' },
-          { icon: 'location-outline',   label: 'Localização',  route: '/(barbeiro)/localizacao' },
-          { icon: 'bar-chart-outline',  label: 'Analytics',    route: '/(barbeiro)/analytics' },
-          { icon: 'document-text-outline', label: 'Relatórios', route: '/(barbeiro)/relatorios' },
+          { icon: 'cut-outline',           label: 'Serviços',    route: '/(barbeiro)/servicos' },
+          { icon: 'location-outline',      label: 'Localização', route: '/(barbeiro)/localizacao' },
+          { icon: 'bar-chart-outline',     label: 'Analytics',   route: '/(barbeiro)/analytics' },
+          { icon: 'document-text-outline', label: 'Relatórios',  route: '/(barbeiro)/relatorios' },
         ].map(item => (
           <TouchableOpacity
             key={item.route}
@@ -168,13 +190,22 @@ const styles = StyleSheet.create({
   btnDisabled: { opacity: 0.6 },
   btnText: { color: Colors.white, fontWeight: '700', fontSize: 15 },
   btnOutline: {
-    borderWidth: 2, borderColor: Colors.primary, borderRadius: BorderRadius.md,
-    paddingVertical: 10, alignItems: 'center', marginTop: 8,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 6, borderWidth: 2, borderColor: Colors.primary,
+    borderRadius: BorderRadius.md, paddingVertical: 10, marginTop: 8,
   },
   btnOutlineText: { color: Colors.primary, fontWeight: '700', fontSize: 15 },
-  planBox: { backgroundColor: '#faf5ff', borderRadius: BorderRadius.md, padding: Spacing.md, marginBottom: 8 },
-  planName: { fontSize: 18, fontWeight: '700', color: Colors.primary },
-  planPrice: { fontSize: 14, color: Colors.textSecondary, marginTop: 2 },
+  planBox: {
+    backgroundColor: '#faf5ff', borderRadius: BorderRadius.md,
+    padding: Spacing.md, marginBottom: 8,
+    borderLeftWidth: 4, borderLeftColor: Colors.primary,
+  },
+  planBadge: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  planDot: { width: 10, height: 10, borderRadius: 5 },
+  planName: { fontSize: 17, fontWeight: '700' },
+  planPrice: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary, marginVertical: 4 },
+  planDetails: { marginTop: 4 },
+  planDetailText: { fontSize: 12, color: Colors.textSecondary },
   menuItem: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border,

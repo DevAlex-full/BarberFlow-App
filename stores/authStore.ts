@@ -68,11 +68,11 @@ export interface ClientSignUpData {
 
 // ─── Chaves válidas (sem @ ou : — SecureStore só aceita alfanumérico, . - _) ──
 const K = {
-  BARBER_TOKEN:    'barberFlow_token',
-  BARBER_USER:     'barberFlow_user',
-  BARBER_SHOP:     'barberFlow_barbershop',
-  CLIENT_TOKEN:    'barberFlow_client_token',
-  CLIENT_USER:     'barberFlow_client_user',
+  BARBER_TOKEN: 'barberFlow_token',
+  BARBER_USER:  'barberFlow_user',
+  BARBER_SHOP:  'barberFlow_barbershop',
+  CLIENT_TOKEN: 'barberFlow_client_token',
+  CLIENT_USER:  'barberFlow_client_user',
 };
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -123,6 +123,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   // ── Login Barbeiro ──────────────────────────────────────────────────────────
   barberSignIn: async (email, password) => {
+    console.log('🔑 [Auth] Tentando login barbeiro:', email, '| senha length:', password.length);
     const response = await api.post('/auth/login', { email, password });
     const { token, user, barbershop } = response.data;
 
@@ -162,6 +163,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   // ── Login Cliente ───────────────────────────────────────────────────────────
   clientSignIn: async (email, password) => {
+    console.log('🔑 [Auth] Tentando login cliente:', email, '| senha length:', password.length);
     const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://barberflow-back-end-19nv.onrender.com/api';
     const response = await fetch(`${API_URL}/client/auth/login`, {
       method: 'POST',

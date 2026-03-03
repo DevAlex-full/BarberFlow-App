@@ -147,7 +147,7 @@ export default function DashboardScreen() {
           label="Clientes"
           value={stats?.totalCustomers || 0}
           icon="people"
-          color={Colors.accent[600]}
+          color={Colors.accent}
           bg="#eff6ff"
         />
         <StatCard
