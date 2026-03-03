@@ -5,6 +5,7 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
+  ImageBackground,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -23,11 +24,12 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState('');
-
-  // ── Qual perfil está tentando logar ────────────────────────────────────────
-  // O app tem 2 entradas: Barbeiro (padrão) e Cliente
-  // O login de cliente fica em /(cliente) — igual ao web /sou-cliente
   const [mode, setMode] = useState<'barbeiro' | 'cliente'>('barbeiro');
+
+  // Fundo muda conforme o modo selecionado
+  const bgImage = mode === 'barbeiro'
+    ? require('@/assets/images/fundo1.png')
+    : require('@/assets/images/fundo4.jpg');
 
   async function handleLogin() {
     if (!email || !password) {
@@ -40,7 +42,6 @@ export default function LoginScreen() {
     try {
       if (mode === 'barbeiro') {
         await barberSignIn(email, password);
-        // Redirecionamento feito pelo index.tsx via Redirect
         router.replace('/(barbeiro)');
       } else {
         const { clientSignIn } = useAuthStore.getState();
@@ -55,130 +56,131 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <StatusBar style="light" />
-
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
+    <ImageBackground source={bgImage} style={{ flex: 1 }} resizeMode="cover">
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Background com overlay (fiel ao web: fundo1.png + bg-black/40) */}
-        <View style={styles.overlay} />
+        <StatusBar style="light" />
 
-        {/* Card de Login */}
-        <View style={styles.card}>
-          {/* Logo */}
-          <View style={styles.logoContainer}>
-            <Image
-              source={require('@/assets/images/Logo.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-          </View>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.overlay} />
 
-          {/* Toggle Barbeiro / Cliente */}
-          <View style={styles.toggleContainer}>
-            <TouchableOpacity
-              style={[styles.toggleBtn, mode === 'barbeiro' && styles.toggleBtnActive]}
-              onPress={() => { setMode('barbeiro'); setError(''); }}
-            >
-              <Text style={[styles.toggleText, mode === 'barbeiro' && styles.toggleTextActive]}>
-                ✂️ Barbeiro
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.toggleBtn, mode === 'cliente' && styles.toggleBtnActive]}
-              onPress={() => { setMode('cliente'); setError(''); }}
-            >
-              <Text style={[styles.toggleText, mode === 'cliente' && styles.toggleTextActive]}>
-                👤 Cliente
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Erro */}
-          {!!error && (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorText}>{error}</Text>
+          {/* Card de Login */}
+          <View style={styles.card}>
+            {/* Logo */}
+            <View style={styles.logoContainer}>
+              <Image
+                source={require('@/assets/images/logo4.png')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
             </View>
-          )}
 
-          {/* Campo E-mail */}
-          <TextInput
-            style={styles.input}
-            placeholder="Usuário ou E-mail"
-            placeholderTextColor={Colors.gray[400]}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
+            {/* Toggle Barbeiro / Cliente */}
+            <View style={styles.toggleContainer}>
+              <TouchableOpacity
+                style={[styles.toggleBtn, mode === 'barbeiro' && styles.toggleBtnActive]}
+                onPress={() => { setMode('barbeiro'); setError(''); }}
+              >
+                <Text style={[styles.toggleText, mode === 'barbeiro' && styles.toggleTextActive]}>
+                  ✂️ Barbeiro
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.toggleBtn, mode === 'cliente' && styles.toggleBtnActive]}
+                onPress={() => { setMode('cliente'); setError(''); }}
+              >
+                <Text style={[styles.toggleText, mode === 'cliente' && styles.toggleTextActive]}>
+                  👤 Cliente
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-          {/* Campo Senha */}
-          <TextInput
-            style={styles.input}
-            placeholder="Senha"
-            placeholderTextColor={Colors.gray[400]}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
+            {/* Erro */}
+            {!!error && (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
 
-          {/* Botão Acessar (fiel ao web: bg-[#003A5D]) */}
-          <TouchableOpacity
-            style={[styles.btnPrimary, loading && styles.btnDisabled]}
-            onPress={handleLogin}
-            disabled={loading}
-            activeOpacity={0.85}
-          >
-            {loading
-              ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.btnPrimaryText}>ACESSAR</Text>
-            }
-          </TouchableOpacity>
+            {/* Campo E-mail */}
+            <TextInput
+              style={styles.input}
+              placeholder="Usuário ou E-mail"
+              placeholderTextColor={Colors.gray[400]}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
 
-          {/* Esqueceu a senha */}
-          <TouchableOpacity
-            onPress={() => router.push('/(auth)/forgot-password')}
-            style={styles.forgotBtn}
-          >
-            <Text style={styles.forgotText}>Esqueceu a Senha?</Text>
-          </TouchableOpacity>
+            {/* Campo Senha */}
+            <TextInput
+              style={styles.input}
+              placeholder="Senha"
+              placeholderTextColor={Colors.gray[400]}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
 
-          {/* Divisor */}
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>ou</Text>
-            <View style={styles.dividerLine} />
+            {/* Botão Acessar */}
+            <TouchableOpacity
+              style={[styles.btnPrimary, loading && styles.btnDisabled]}
+              onPress={handleLogin}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              {loading
+                ? <ActivityIndicator color="#fff" />
+                : <Text style={styles.btnPrimaryText}>ACESSAR</Text>
+              }
+            </TouchableOpacity>
+
+            {/* Esqueceu a senha */}
+            <TouchableOpacity
+              onPress={() => router.push('/(auth)/forgot-password')}
+              style={styles.forgotBtn}
+            >
+              <Text style={styles.forgotText}>Esqueceu a Senha?</Text>
+            </TouchableOpacity>
+
+            {/* Divisor */}
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>ou</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Botão Criar Conta */}
+            <TouchableOpacity
+              style={styles.btnSecondary}
+              onPress={() => router.push('/(auth)/register')}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.btnSecondaryText}>CRIAR CONTA</Text>
+            </TouchableOpacity>
           </View>
 
-          {/* Botão Criar Conta */}
-          <TouchableOpacity
-            style={styles.btnSecondary}
-            onPress={() => router.push('/(auth)/register')}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.btnSecondaryText}>CRIAR CONTA</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Footer */}
-        <Text style={styles.footer}>
-          © 2025 BarberFlow. Todos os direitos reservados.
-        </Text>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          {/* Footer */}
+          <Text style={styles.footer}>
+            © 2025 BarberFlow. Todos os direitos reservados.
+          </Text>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#1a1a2e',
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     padding: Spacing.md,

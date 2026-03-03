@@ -5,6 +5,7 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
+  ImageBackground,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
@@ -58,153 +59,159 @@ export default function RegisterScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
+    <ImageBackground
+      source={require('@/assets/images/fundo2.jpg')}
       style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      resizeMode="cover"
     >
-      <StatusBar style="light" />
-
-      <ScrollView
-        contentContainerStyle={styles.container}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={styles.overlay} />
+        <StatusBar style="light" />
 
-        <View style={styles.card}>
-          {/* Logo */}
-          <View style={styles.logoContainer}>
-            <Image
-              source={require('@/assets/images/Logo.png')}
-              style={styles.logo}
-              resizeMode="contain"
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.overlay} />
+
+          <View style={styles.card}>
+            {/* Logo */}
+            <View style={styles.logoContainer}>
+              <Image
+                source={require('@/assets/images/logo4.png')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </View>
+
+            {/* Título */}
+            <Text style={styles.title}>Criar Conta</Text>
+            <Text style={styles.subtitle}>Cadastre sua barbearia e comece agora</Text>
+
+            {/* Erro */}
+            {!!error && (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorTitle}>Erro ao criar conta</Text>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
+
+            {/* ── Seus Dados ── */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Seus Dados</Text>
+              <View style={styles.sectionLine} />
+            </View>
+
+            <TextInput
+              style={styles.input}
+              placeholder="Nome Completo *"
+              placeholderTextColor={Colors.gray[400]}
+              value={formData.name}
+              onChangeText={v => update('name', v)}
             />
-          </View>
+            <TextInput
+              style={styles.input}
+              placeholder="E-mail *"
+              placeholderTextColor={Colors.gray[400]}
+              value={formData.email}
+              onChangeText={v => update('email', v)}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Senha (mínimo 6 caracteres) *"
+              placeholderTextColor={Colors.gray[400]}
+              value={formData.password}
+              onChangeText={v => update('password', v)}
+              secureTextEntry
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Telefone *"
+              placeholderTextColor={Colors.gray[400]}
+              value={formData.phone}
+              onChangeText={v => update('phone', v)}
+              keyboardType="phone-pad"
+            />
 
-          {/* Título */}
-          <Text style={styles.title}>Criar Conta</Text>
-          <Text style={styles.subtitle}>Cadastre sua barbearia e comece agora</Text>
-
-          {/* Erro */}
-          {!!error && (
-            <View style={styles.errorBox}>
-              <Text style={styles.errorTitle}>Erro ao criar conta</Text>
-              <Text style={styles.errorText}>{error}</Text>
+            {/* ── Dados da Barbearia ── */}
+            <View style={[styles.sectionHeader, { marginTop: Spacing.md }]}>
+              <Text style={styles.sectionTitle}>Dados da Barbearia</Text>
+              <View style={styles.sectionLine} />
             </View>
-          )}
 
-          {/* ── Seus Dados ── */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Seus Dados</Text>
-            <View style={styles.sectionLine} />
-          </View>
+            <TextInput
+              style={styles.input}
+              placeholder="Nome da Barbearia *"
+              placeholderTextColor={Colors.gray[400]}
+              value={formData.barbershopName}
+              onChangeText={v => update('barbershopName', v)}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Telefone da Barbearia *"
+              placeholderTextColor={Colors.gray[400]}
+              value={formData.barbershopPhone}
+              onChangeText={v => update('barbershopPhone', v)}
+              keyboardType="phone-pad"
+            />
 
-          <TextInput
-            style={styles.input}
-            placeholder="Nome Completo *"
-            placeholderTextColor={Colors.gray[400]}
-            value={formData.name}
-            onChangeText={v => update('name', v)}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="E-mail *"
-            placeholderTextColor={Colors.gray[400]}
-            value={formData.email}
-            onChangeText={v => update('email', v)}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Senha (mínimo 6 caracteres) *"
-            placeholderTextColor={Colors.gray[400]}
-            value={formData.password}
-            onChangeText={v => update('password', v)}
-            secureTextEntry
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Telefone *"
-            placeholderTextColor={Colors.gray[400]}
-            value={formData.phone}
-            onChangeText={v => update('phone', v)}
-            keyboardType="phone-pad"
-          />
-
-          {/* ── Dados da Barbearia ── */}
-          <View style={[styles.sectionHeader, { marginTop: Spacing.md }]}>
-            <Text style={styles.sectionTitle}>Dados da Barbearia</Text>
-            <View style={styles.sectionLine} />
-          </View>
-
-          <TextInput
-            style={styles.input}
-            placeholder="Nome da Barbearia *"
-            placeholderTextColor={Colors.gray[400]}
-            value={formData.barbershopName}
-            onChangeText={v => update('barbershopName', v)}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Telefone da Barbearia *"
-            placeholderTextColor={Colors.gray[400]}
-            value={formData.barbershopPhone}
-            onChangeText={v => update('barbershopPhone', v)}
-            keyboardType="phone-pad"
-          />
-
-          {/* Termos */}
-          <View style={styles.termsBox}>
-            <Text style={styles.termsText}>
-              Ao criar sua conta, você concorda com nossos{' '}
-              <Text style={styles.termsLink}>Termos de Uso</Text>
-              {' '}e{' '}
-              <Text style={styles.termsLink}>Política de Privacidade</Text>
-            </Text>
-          </View>
-
-          {/* Botão Criar Conta */}
-          <TouchableOpacity
-            style={[styles.btnPrimary, loading && styles.btnDisabled]}
-            onPress={handleRegister}
-            disabled={loading}
-            activeOpacity={0.85}
-          >
-            {loading
-              ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.btnPrimaryText}>CRIAR CONTA GRÁTIS</Text>
-            }
-          </TouchableOpacity>
-
-          {/* Badge grátis */}
-          <View style={styles.badgeContainer}>
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>🎉 15 dias de teste grátis</Text>
+            {/* Termos */}
+            <View style={styles.termsBox}>
+              <Text style={styles.termsText}>
+                Ao criar sua conta, você concorda com nossos{' '}
+                <Text style={styles.termsLink}>Termos de Uso</Text>
+                {' '}e{' '}
+                <Text style={styles.termsLink}>Política de Privacidade</Text>
+              </Text>
             </View>
-          </View>
 
-          {/* Link login */}
-          <View style={styles.loginLink}>
-            <Text style={styles.loginLinkText}>Já tem uma conta? </Text>
-            <TouchableOpacity onPress={() => router.back()}>
-              <Text style={styles.loginLinkAction}>Fazer Login</Text>
+            {/* Botão Criar Conta */}
+            <TouchableOpacity
+              style={[styles.btnPrimary, loading && styles.btnDisabled]}
+              onPress={handleRegister}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              {loading
+                ? <ActivityIndicator color="#fff" />
+                : <Text style={styles.btnPrimaryText}>CRIAR CONTA GRÁTIS</Text>
+              }
             </TouchableOpacity>
-          </View>
-        </View>
 
-        <Text style={styles.footer}>
-          © 2025 BarberFlow. Todos os direitos reservados.
-        </Text>
-      </ScrollView>
-    </KeyboardAvoidingView>
+            {/* Badge grátis */}
+            <View style={styles.badgeContainer}>
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>🎉 15 dias de teste grátis</Text>
+              </View>
+            </View>
+
+            {/* Link login */}
+            <View style={styles.loginLink}>
+              <Text style={styles.loginLinkText}>Já tem uma conta? </Text>
+              <TouchableOpacity onPress={() => router.back()}>
+                <Text style={styles.loginLinkAction}>Fazer Login</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <Text style={styles.footer}>
+            © 2025 BarberFlow. Todos os direitos reservados.
+          </Text>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: '#1a1a2e',
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     padding: Spacing.md,

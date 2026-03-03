@@ -3,7 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import api from '@/lib/api';
 import clientApi from '@/lib/client-api';
 
-// ─── Types (espelho do AuthContext.tsx e ClientAuthContext.tsx do web) ────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface BarberUser {
   id: string;
@@ -33,25 +33,20 @@ export interface ClientUser {
 // ─── Store ────────────────────────────────────────────────────────────────────
 
 interface AuthState {
-  // Barbeiro / Admin
-  barberUser:  BarberUser | null;
-  barbershop:  Barbershop | null;
+  barberUser:    BarberUser | null;
+  barbershop:    Barbershop | null;
   barberLoading: boolean;
-
-  // Cliente
-  clientUser:  ClientUser | null;
+  clientUser:    ClientUser | null;
   clientLoading: boolean;
 
-  // Actions — Barbeiro
-  barberSignIn:  (email: string, password: string) => Promise<void>;
-  barberSignUp:  (data: BarberSignUpData) => Promise<void>;
-  barberSignOut: () => Promise<void>;
+  barberSignIn:      (email: string, password: string) => Promise<void>;
+  barberSignUp:      (data: BarberSignUpData) => Promise<void>;
+  barberSignOut:     () => Promise<void>;
   loadBarberSession: () => Promise<void>;
 
-  // Actions — Cliente
-  clientSignIn:  (email: string, password: string) => Promise<void>;
-  clientSignUp:  (data: ClientSignUpData) => Promise<void>;
-  clientSignOut: () => Promise<void>;
+  clientSignIn:      (email: string, password: string) => Promise<void>;
+  clientSignUp:      (data: ClientSignUpData) => Promise<void>;
+  clientSignOut:     () => Promise<void>;
   loadClientSession: () => Promise<void>;
 }
 
@@ -71,7 +66,14 @@ export interface ClientSignUpData {
   phone: string;
 }
 
-// ─── Zustand Store ────────────────────────────────────────────────────────────
+// ─── Chaves válidas (sem @ ou : — SecureStore só aceita alfanumérico, . - _) ──
+const K = {
+  BARBER_TOKEN:    'barberFlow_token',
+  BARBER_USER:     'barberFlow_user',
+  BARBER_SHOP:     'barberFlow_barbershop',
+  CLIENT_TOKEN:    'barberFlow_client_token',
+  CLIENT_USER:     'barberFlow_client_user',
+};
 
 export const useAuthStore = create<AuthState>((set) => ({
   barberUser:    null,
@@ -80,12 +82,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   clientUser:    null,
   clientLoading: true,
 
-  // ── Carregar sessão do Barbeiro ao abrir o app ──────────────────────────────
+  // ── Carregar sessão do Barbeiro ─────────────────────────────────────────────
   loadBarberSession: async () => {
     try {
-      const token   = await SecureStore.getItemAsync('@barberFlow:token');
-      const userStr = await SecureStore.getItemAsync('@barberFlow:user');
-      const shopStr = await SecureStore.getItemAsync('@barberFlow:barbershop');
+      const token   = await SecureStore.getItemAsync(K.BARBER_TOKEN);
+      const userStr = await SecureStore.getItemAsync(K.BARBER_USER);
+      const shopStr = await SecureStore.getItemAsync(K.BARBER_SHOP);
 
       if (token && userStr) {
         const user = JSON.parse(userStr);
@@ -101,11 +103,11 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  // ── Carregar sessão do Cliente ao abrir o app ───────────────────────────────
+  // ── Carregar sessão do Cliente ──────────────────────────────────────────────
   loadClientSession: async () => {
     try {
-      const token   = await SecureStore.getItemAsync('@barberFlow:client:token');
-      const userStr = await SecureStore.getItemAsync('@barberFlow:client:user');
+      const token   = await SecureStore.getItemAsync(K.CLIENT_TOKEN);
+      const userStr = await SecureStore.getItemAsync(K.CLIENT_USER);
 
       if (token && userStr) {
         const user = JSON.parse(userStr);
@@ -124,10 +126,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     const response = await api.post('/auth/login', { email, password });
     const { token, user, barbershop } = response.data;
 
-    await SecureStore.setItemAsync('@barberFlow:token',      token);
-    await SecureStore.setItemAsync('@barberFlow:user',       JSON.stringify(user));
+    await SecureStore.setItemAsync(K.BARBER_TOKEN, token);
+    await SecureStore.setItemAsync(K.BARBER_USER,  JSON.stringify(user));
     if (barbershop) {
-      await SecureStore.setItemAsync('@barberFlow:barbershop', JSON.stringify(barbershop));
+      await SecureStore.setItemAsync(K.BARBER_SHOP, JSON.stringify(barbershop));
     }
 
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -140,9 +142,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     const response = await api.post('/auth/register', data);
     const { token, user, barbershop } = response.data;
 
-    await SecureStore.setItemAsync('@barberFlow:token',      token);
-    await SecureStore.setItemAsync('@barberFlow:user',       JSON.stringify(user));
-    await SecureStore.setItemAsync('@barberFlow:barbershop', JSON.stringify(barbershop));
+    await SecureStore.setItemAsync(K.BARBER_TOKEN, token);
+    await SecureStore.setItemAsync(K.BARBER_USER,  JSON.stringify(user));
+    await SecureStore.setItemAsync(K.BARBER_SHOP,  JSON.stringify(barbershop));
 
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     set({ barberUser: user, barbershop });
@@ -150,9 +152,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   // ── Logout Barbeiro ─────────────────────────────────────────────────────────
   barberSignOut: async () => {
-    await SecureStore.deleteItemAsync('@barberFlow:token');
-    await SecureStore.deleteItemAsync('@barberFlow:user');
-    await SecureStore.deleteItemAsync('@barberFlow:barbershop');
+    await SecureStore.deleteItemAsync(K.BARBER_TOKEN);
+    await SecureStore.deleteItemAsync(K.BARBER_USER);
+    await SecureStore.deleteItemAsync(K.BARBER_SHOP);
     delete api.defaults.headers.common['Authorization'];
     set({ barberUser: null, barbershop: null });
     console.log('👋 [Auth] Barbeiro deslogado');
@@ -174,8 +176,8 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     const { token, client } = await response.json();
 
-    await SecureStore.setItemAsync('@barberFlow:client:token', token);
-    await SecureStore.setItemAsync('@barberFlow:client:user',  JSON.stringify(client));
+    await SecureStore.setItemAsync(K.CLIENT_TOKEN, token);
+    await SecureStore.setItemAsync(K.CLIENT_USER,  JSON.stringify(client));
 
     set({ clientUser: client });
     console.log('✅ [Auth] Cliente logado:', client.email);
@@ -197,16 +199,16 @@ export const useAuthStore = create<AuthState>((set) => ({
 
     const { token, client } = await response.json();
 
-    await SecureStore.setItemAsync('@barberFlow:client:token', token);
-    await SecureStore.setItemAsync('@barberFlow:client:user',  JSON.stringify(client));
+    await SecureStore.setItemAsync(K.CLIENT_TOKEN, token);
+    await SecureStore.setItemAsync(K.CLIENT_USER,  JSON.stringify(client));
 
     set({ clientUser: client });
   },
 
   // ── Logout Cliente ──────────────────────────────────────────────────────────
   clientSignOut: async () => {
-    await SecureStore.deleteItemAsync('@barberFlow:client:token');
-    await SecureStore.deleteItemAsync('@barberFlow:client:user');
+    await SecureStore.deleteItemAsync(K.CLIENT_TOKEN);
+    await SecureStore.deleteItemAsync(K.CLIENT_USER);
     set({ clientUser: null });
     console.log('👋 [Auth] Cliente deslogado');
   },

@@ -1,10 +1,6 @@
 import axios, { InternalAxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
-// ✅ Equivalente ao client-api.ts do web
-// Web usa: sessionStorage (token do CLIENTE)
-// App usa: SecureStore com chave separada '@barberFlow:client:token'
-
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ||
   'https://barberflow-back-end-19nv.onrender.com/api';
@@ -17,7 +13,8 @@ const clientApi = axios.create({
 
 clientApi.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    const token = await SecureStore.getItemAsync('@barberFlow:client:token');
+    // ✅ Chave corrigida — sem @ ou : (inválidos no SecureStore)
+    const token = await SecureStore.getItemAsync('barberFlow_client_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -30,11 +27,15 @@ clientApi.interceptors.request.use(
 clientApi.interceptors.response.use(
   (response) => response,
   async (error) => {
-    console.error('❌ [CLIENT-API] Erro:', error.response?.status, error.config?.url);
+    const status = error.response?.status;
+    const url    = error.config?.url;
+    const msg    = error.response?.data?.message || error.message || 'Erro desconhecido';
+    console.error('❌ [CLIENT-API] Erro:', status, url, msg);
 
-    if (error.response?.status === 401) {
-      await SecureStore.deleteItemAsync('@barberFlow:client:token');
-      await SecureStore.deleteItemAsync('@barberFlow:client:user');
+    if (status === 401) {
+      // ✅ Chaves corrigidas
+      await SecureStore.deleteItemAsync('barberFlow_client_token');
+      await SecureStore.deleteItemAsync('barberFlow_client_user');
     }
 
     return Promise.reject(error);
