@@ -2,66 +2,68 @@ import { useState, useCallback } from 'react';
 import api from '@/lib/api';
 
 export interface FinanceSummary {
-  totalIncome:  number;
-  totalExpense: number;
-  balance:      number;
-  period:       string;
+  currentBalance: number;
+  totalRevenue:   number;
+  totalExpenses:  number;
+  netProfit:      number;
+  profitMargin:   string;
+  incomeCount:    number;
+  expenseCount:   number;
 }
 
 export interface Transaction {
-  id:            string;
-  type:          'income' | 'expense';
-  description:   string;
-  amount:        number;
-  category:      string;
-  date:          string;
+  id:             string;
+  type:           'income' | 'expense';
+  description:    string;
+  amount:         number;
+  category:       string;
+  date:           string;
   paymentMethod?: string;
+  status:         string;
 }
 
 export interface Commission {
-  id:               string;
-  barberName:       string;
-  barberId:         string;
-  totalServices:    number;
-  totalRevenue:     number;
-  commissionRate:   number;
-  commissionAmount: number;
-  period:           string;
+  id:         string;
+  percentage: number;
+  amount:     number;
+  status:     'pending' | 'paid';
+  paidAt?:    string;
+  barber?: {
+    name:  string;
+    email: string;
+  };
 }
 
 export interface Goal {
-  id:           string;
-  title:        string;
-  type:         'revenue' | 'appointments' | 'clients' | 'custom';
-  targetValue:  number;
-  currentValue: number;
-  period:       'daily' | 'weekly' | 'monthly';
-  deadline?:    string;
-  status:       'active' | 'completed' | 'failed';
+  id:            string;
+  name:          string;
+  targetAmount:  number;
+  currentAmount: number;
+  percentage:    string;
+  remaining:     number;
+  daysRemaining: number;
+  status:        'active' | 'completed' | 'expired';
+  startDate:     string;
+  endDate:       string;
 }
 
 export function useFinanceiro() {
-  const [summary, setSummary]           = useState<FinanceSummary | null>(null);
+  const [summary,      setSummary]      = useState<FinanceSummary | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [commissions, setCommissions]   = useState<Commission[]>([]);
-  const [goals, setGoals]               = useState<Goal[]>([]);
-  const [loading, setLoading]           = useState(false);
-  const [refreshing, setRefreshing]     = useState(false);
-  const [error, setError]               = useState<string | null>(null);
+  const [commissions,  setCommissions]  = useState<Commission[]>([]);
+  const [goals,        setGoals]        = useState<Goal[]>([]);
+  const [loading,      setLoading]      = useState(false);
+  const [refreshing,   setRefreshing]   = useState(false);
+  const [error,        setError]        = useState<string | null>(null);
 
   // ── Resumo financeiro ───────────────────────────────────────────────────────
   const loadSummary = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
+      // ✅ CORRETO: /finance/summary  (era /finance/summary — OK)
       const res = await api.get('/finance/summary');
-      const data = res.data;
-      setSummary({
-        totalIncome:  Number(data.totalIncome  || 0),
-        totalExpense: Number(data.totalExpense || 0),
-        balance:      Number(data.totalIncome  || 0) - Number(data.totalExpense || 0),
-        period:       data.period || 'Mês atual',
-      });
+      setSummary(res.data?.summary ?? res.data);
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Erro ao carregar resumo financeiro');
     } finally {
@@ -74,8 +76,9 @@ export function useFinanceiro() {
     setLoading(true);
     setError(null);
     try {
+      // ✅ CORRIGIDO: /transactions  (era /finance/transactions ❌)
       const params = type ? { type } : {};
-      const res = await api.get('/finance/transactions', { params });
+      const res = await api.get('/transactions', { params });
       setTransactions(res.data || []);
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Erro ao carregar transações');
@@ -85,12 +88,17 @@ export function useFinanceiro() {
   }, []);
 
   // ── Comissões ───────────────────────────────────────────────────────────────
-  const loadCommissions = useCallback(async () => {
+  const loadCommissions = useCallback(async (month?: number, year?: number) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get('/finance/commissions');
-      setCommissions(res.data || []);
+      const currentDate = new Date();
+      const m = month ?? currentDate.getMonth() + 1;
+      const y = year  ?? currentDate.getFullYear();
+
+      // ✅ CORRIGIDO: /commissions/report  (era /finance/commissions ❌)
+      const res = await api.get('/commissions/report', { params: { month: m, year: y } });
+      setCommissions(res.data?.commissions || []);
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Erro ao carregar comissões');
     } finally {
@@ -103,8 +111,9 @@ export function useFinanceiro() {
     setLoading(true);
     setError(null);
     try {
-      const res = await api.get('/finance/goals');
-      setGoals(res.data || []);
+      // ✅ CORRIGIDO: /goals/progress  (era /finance/goals ❌)
+      const res = await api.get('/goals/progress');
+      setGoals(res.data?.goals || []);
     } catch (e: any) {
       setError(e?.response?.data?.message || 'Erro ao carregar metas');
     } finally {
@@ -115,7 +124,12 @@ export function useFinanceiro() {
   // ── Refresh geral ───────────────────────────────────────────────────────────
   const refreshAll = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([loadSummary(), loadTransactions(), loadCommissions(), loadGoals()]);
+    await Promise.all([
+      loadSummary(),
+      loadTransactions(),
+      loadCommissions(),
+      loadGoals(),
+    ]);
     setRefreshing(false);
   }, [loadSummary, loadTransactions, loadCommissions, loadGoals]);
 
@@ -124,13 +138,12 @@ export function useFinanceiro() {
     new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
   const getGoalProgress = (goal: Goal) =>
-    Math.min((goal.currentValue / goal.targetValue) * 100, 100);
+    Math.min((Number(goal.currentAmount) / Number(goal.targetAmount)) * 100, 100);
 
   const getActiveGoals    = () => goals.filter(g => g.status === 'active');
   const getCompletedGoals = () => goals.filter(g => g.status === 'completed');
-
   const getTotalCommissions = () =>
-    commissions.reduce((s, c) => s + c.commissionAmount, 0);
+    commissions.reduce((s, c) => s + Number(c.amount), 0);
 
   return {
     // Estado

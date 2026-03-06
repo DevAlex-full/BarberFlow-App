@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Tabs, router } from 'expo-router';
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,11 +8,15 @@ import { Colors } from '@/constants/colors';
 export default function BarberLayout() {
   const { barberUser, barbershop, barberSignOut } = useAuthStore();
 
-  // Guard — se não tiver barbeiro logado, volta pro login
-  if (!barberUser) {
-    router.replace('/(auth)/login');
-    return null;
-  }
+  useEffect(() => {
+    // ✅ Só redireciona se NÃO estiver logado como barbeiro
+    // Super admin PODE acessar o dashboard da barbearia (tem o botão no admin)
+    if (!barberUser) {
+      router.replace('/(auth)/login');
+    }
+  }, [barberUser]);
+
+  if (!barberUser) return null;
 
   async function handleSignOut() {
     await barberSignOut();
@@ -29,9 +34,20 @@ export default function BarberLayout() {
         tabBarStyle: styles.tabBar,
         tabBarLabelStyle: styles.tabLabel,
         headerRight: () => (
-          <TouchableOpacity onPress={handleSignOut} style={styles.logoutBtn}>
-            <Ionicons name="log-out-outline" size={24} color={Colors.gray[600]} />
-          </TouchableOpacity>
+          <View style={styles.headerRightContainer}>
+            {/* ✅ Super admin vê botão para voltar ao painel admin */}
+            {barberUser.isSuperAdmin && (
+              <TouchableOpacity
+                onPress={() => router.replace('/(admin)')}
+                style={styles.adminBtn}
+              >
+                <Ionicons name="shield-outline" size={20} color={Colors.primary} />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={handleSignOut} style={styles.logoutBtn}>
+              <Ionicons name="log-out-outline" size={24} color={Colors.gray[600]} />
+            </TouchableOpacity>
+          </View>
         ),
         headerLeft: () => (
           <View style={styles.headerLeft}>
@@ -44,12 +60,14 @@ export default function BarberLayout() {
               </Text>
               <Text style={styles.userName} numberOfLines={1}>
                 {barberUser.name}
+                {barberUser.isSuperAdmin ? ' ⚡' : ''}
               </Text>
             </View>
           </View>
         ),
       }}
     >
+      {/* ── Tabs visíveis na barra inferior ─────────────────────────── */}
       <Tabs.Screen
         name="index"
         options={{
@@ -100,15 +118,18 @@ export default function BarberLayout() {
           ),
         }}
       />
-      {/* Telas sem tab (ficam ocultas na barra) */}
-      <Tabs.Screen name="servicos"       options={{ href: null, title: 'Serviços' }} />
-      <Tabs.Screen name="localizacao"    options={{ href: null, title: 'Localização' }} />
-      <Tabs.Screen name="relatorios"     options={{ href: null, title: 'Relatórios' }} />
-      <Tabs.Screen name="analytics"      options={{ href: null, title: 'Analytics' }} />
-      <Tabs.Screen name="planos"         options={{ href: null, title: 'Planos' }} />
-      <Tabs.Screen name="financeiro/transacoes" options={{ href: null, title: 'Transações' }} />
-      <Tabs.Screen name="financeiro/comissoes"  options={{ href: null, title: 'Comissões' }} />
-      <Tabs.Screen name="financeiro/metas"      options={{ href: null, title: 'Metas' }} />
+
+      {/* ── Telas sem tab (ocultas na barra) ────────────────────────── */}
+      <Tabs.Screen name="servicos"                     options={{ href: null, title: 'Serviços' }} />
+      <Tabs.Screen name="localizacao"                  options={{ href: null, title: 'Localização' }} />
+      <Tabs.Screen name="relatorios"                   options={{ href: null, title: 'Relatórios' }} />
+      <Tabs.Screen name="analytics"                    options={{ href: null, title: 'Analytics' }} />
+      <Tabs.Screen name="planos"                       options={{ href: null, title: 'Planos' }} />
+      <Tabs.Screen name="financeiro/transacoes"        options={{ href: null, title: 'Transações' }} />
+      <Tabs.Screen name="financeiro/comissoes"         options={{ href: null, title: 'Comissões' }} />
+      <Tabs.Screen name="financeiro/metas"             options={{ href: null, title: 'Metas' }} />
+      <Tabs.Screen name="relatorios-financeiros/index" options={{ href: null, title: 'Rel. Financeiros' }} />
+      <Tabs.Screen name="landing-page/index"           options={{ href: null, title: 'Landing Page' }} />
     </Tabs>
   );
 }
@@ -126,9 +147,20 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
   },
+  headerRightContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 8,
+    gap: 4,
+  },
+  adminBtn: {
+    padding: 6,
+    borderRadius: 8,
+    backgroundColor: '#faf5ff',
+  },
   logoutBtn: {
-    marginRight: 16,
     padding: 4,
+    marginLeft: 4,
   },
   headerLeft: {
     flexDirection: 'row',

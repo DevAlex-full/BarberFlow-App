@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, TextInput, ActivityIndicator, Alert,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  TextInput, ActivityIndicator, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -13,10 +13,10 @@ import { getPlanById, formatPrice, getPlanBadgeColor, trialPlan } from '@/lib/pl
 export default function ConfiguracoesScreen() {
   const { barberUser, barberSignOut } = useAuthStore();
   const [userData, setUserData] = useState<any>(null);
-  const [loading, setLoading]   = useState(true);
-  const [saving, setSaving]     = useState(false);
-  const [name, setName]         = useState('');
-  const [phone, setPhone]       = useState('');
+  const [loading,  setLoading]  = useState(true);
+  const [saving,   setSaving]   = useState(false);
+  const [name,     setName]     = useState('');
+  const [phone,    setPhone]    = useState('');
 
   useEffect(() => { load(); }, []);
 
@@ -24,7 +24,7 @@ export default function ConfiguracoesScreen() {
     try {
       const res = await api.get('/auth/me');
       setUserData(res.data);
-      setName(res.data.name || '');
+      setName(res.data.name   || '');
       setPhone(res.data.phone || '');
     } catch (e) { console.error(e); }
     finally { setLoading(false); }
@@ -35,7 +35,7 @@ export default function ConfiguracoesScreen() {
     try {
       await api.put('/users/profile', { name, phone });
       Alert.alert('Sucesso', 'Dados salvos com sucesso!');
-    } catch (e) {
+    } catch {
       Alert.alert('Erro', 'Não foi possível salvar.');
     } finally { setSaving(false); }
   }
@@ -44,8 +44,7 @@ export default function ConfiguracoesScreen() {
     Alert.alert('Sair', 'Deseja realmente sair?', [
       { text: 'Cancelar', style: 'cancel' },
       {
-        text: 'Sair',
-        style: 'destructive',
+        text: 'Sair', style: 'destructive',
         onPress: async () => {
           await barberSignOut();
           router.replace('/(auth)/login');
@@ -54,13 +53,10 @@ export default function ConfiguracoesScreen() {
     ]);
   }
 
-  // Plano atual — suporta trial e planos pagos
-  const planId    = userData?.barbershop?.plan || 'trial';
-  const plan      = getPlanById(planId);
-  const isTrial   = planId === 'trial' || !plan;
-  const planColor = getPlanBadgeColor(planId);
-
-  // Preço mensal do plano atual (intervalo mensal por padrão)
+  const planId        = userData?.barbershop?.plan || 'trial';
+  const plan          = getPlanById(planId);
+  const isTrial       = planId === 'trial' || !plan;
+  const planColor     = getPlanBadgeColor(planId);
   const planPriceText = isTrial
     ? 'Grátis — 15 dias'
     : `${formatPrice(plan!.prices.monthly.perMonth)}/mês`;
@@ -138,10 +134,12 @@ export default function ConfiguracoesScreen() {
           <Text style={styles.cardTitle}>Mais opções</Text>
         </View>
         {[
-          { icon: 'cut-outline',           label: 'Serviços',    route: '/(barbeiro)/servicos' },
-          { icon: 'location-outline',      label: 'Localização', route: '/(barbeiro)/localizacao' },
-          { icon: 'bar-chart-outline',     label: 'Analytics',   route: '/(barbeiro)/analytics' },
-          { icon: 'document-text-outline', label: 'Relatórios',  route: '/(barbeiro)/relatorios' },
+          { icon: 'cut-outline',           label: 'Serviços',           route: '/(barbeiro)/servicos'               },
+          { icon: 'location-outline',      label: 'Localização',        route: '/(barbeiro)/localizacao'            },
+          { icon: 'globe-outline',         label: 'Landing Page',       route: '/(barbeiro)/landing-page'           },
+          { icon: 'bar-chart-outline',     label: 'Analytics',          route: '/(barbeiro)/analytics'              },
+          { icon: 'document-text-outline', label: 'Relatórios',         route: '/(barbeiro)/relatorios'             },
+          { icon: 'stats-chart-outline',   label: 'Rel. Financeiros',   route: '/(barbeiro)/relatorios-financeiros' },
         ].map(item => (
           <TouchableOpacity
             key={item.route}
@@ -166,55 +164,30 @@ export default function ConfiguracoesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.md, gap: 16, paddingBottom: Spacing.xxl },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  card: {
-    backgroundColor: Colors.white, borderRadius: BorderRadius.xl,
-    padding: Spacing.md, ...Shadow.sm, borderWidth: 1, borderColor: Colors.border,
-  },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: Spacing.md },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
-  field: { marginBottom: Spacing.sm },
-  label: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, marginBottom: 6 },
-  input: {
-    backgroundColor: Colors.gray[50], borderWidth: 1, borderColor: Colors.border,
-    borderRadius: BorderRadius.md, paddingHorizontal: Spacing.md,
-    paddingVertical: 12, fontSize: 15, color: Colors.textPrimary,
-  },
-  inputDisabled: { color: Colors.textMuted, backgroundColor: Colors.gray[100] },
-  btn: {
-    backgroundColor: Colors.primary, borderRadius: BorderRadius.md,
-    paddingVertical: 12, alignItems: 'center', marginTop: 4,
-  },
-  btnDisabled: { opacity: 0.6 },
-  btnText: { color: Colors.white, fontWeight: '700', fontSize: 15 },
-  btnOutline: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, borderWidth: 2, borderColor: Colors.primary,
-    borderRadius: BorderRadius.md, paddingVertical: 10, marginTop: 8,
-  },
+  container:    { flex: 1, backgroundColor: Colors.background },
+  content:      { padding: Spacing.md, gap: 16, paddingBottom: Spacing.xxl },
+  centered:     { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  card:         { backgroundColor: Colors.white, borderRadius: BorderRadius.xl, padding: Spacing.md, ...Shadow.sm, borderWidth: 1, borderColor: Colors.border },
+  cardHeader:   { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: Spacing.md },
+  cardTitle:    { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
+  field:        { marginBottom: Spacing.sm },
+  label:        { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, marginBottom: 6 },
+  input:        { backgroundColor: Colors.gray[50], borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.md, paddingHorizontal: Spacing.md, paddingVertical: 12, fontSize: 15, color: Colors.textPrimary },
+  inputDisabled:{ color: Colors.textMuted, backgroundColor: Colors.gray[100] },
+  btn:          { backgroundColor: Colors.primary, borderRadius: BorderRadius.md, paddingVertical: 12, alignItems: 'center', marginTop: 4 },
+  btnDisabled:  { opacity: 0.6 },
+  btnText:      { color: Colors.white, fontWeight: '700', fontSize: 15 },
+  btnOutline:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 2, borderColor: Colors.primary, borderRadius: BorderRadius.md, paddingVertical: 10, marginTop: 8 },
   btnOutlineText: { color: Colors.primary, fontWeight: '700', fontSize: 15 },
-  planBox: {
-    backgroundColor: '#faf5ff', borderRadius: BorderRadius.md,
-    padding: Spacing.md, marginBottom: 8,
-    borderLeftWidth: 4, borderLeftColor: Colors.primary,
-  },
-  planBadge: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  planDot: { width: 10, height: 10, borderRadius: 5 },
-  planName: { fontSize: 17, fontWeight: '700' },
-  planPrice: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary, marginVertical: 4 },
-  planDetails: { marginTop: 4 },
+  planBox:      { backgroundColor: '#faf5ff', borderRadius: BorderRadius.md, padding: Spacing.md, marginBottom: 8, borderLeftWidth: 4 },
+  planBadge:    { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  planDot:      { width: 10, height: 10, borderRadius: 5 },
+  planName:     { fontSize: 17, fontWeight: '700' },
+  planPrice:    { fontSize: 22, fontWeight: '800', color: Colors.textPrimary, marginVertical: 4 },
+  planDetails:  { marginTop: 4 },
   planDetailText: { fontSize: 12, color: Colors.textSecondary },
-  menuItem: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border,
-  },
+  menuItem:     { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border },
   menuItemText: { flex: 1, fontSize: 15, color: Colors.textPrimary, fontWeight: '500' },
-  logoutBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: Colors.errorBg, borderRadius: BorderRadius.xl,
-    padding: Spacing.md, borderWidth: 1, borderColor: '#fecaca',
-  },
-  logoutText: { color: Colors.error, fontWeight: '700', fontSize: 15 },
+  logoutBtn:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: Colors.errorBg, borderRadius: BorderRadius.xl, padding: Spacing.md, borderWidth: 1, borderColor: '#fecaca' },
+  logoutText:   { color: Colors.error, fontWeight: '700', fontSize: 15 },
 });

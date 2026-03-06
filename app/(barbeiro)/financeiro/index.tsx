@@ -9,8 +9,8 @@ import api from '@/lib/api';
 import { Colors, Spacing, BorderRadius, Shadow } from '@/constants/colors';
 
 export default function FinanceiroScreen() {
-  const [summary, setSummary] = useState<any>(null);
-  const [loading, setLoading]   = useState(true);
+  const [summary, setSummary]       = useState<any>(null);
+  const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => { load(); }, []);
@@ -48,34 +48,38 @@ export default function FinanceiroScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
       showsVerticalScrollIndicator={false}
     >
-      {/* Cards de resumo */}
+      {/* Saldo */}
       <View style={styles.balanceCard}>
         <Text style={styles.balanceLabel}>Saldo do Mês</Text>
-        <Text style={[styles.balanceValue, { color: balance >= 0 ? Colors.success : Colors.error }]}>
+        <Text style={[styles.balanceValue, { color: balance >= 0 ? '#fff' : Colors.error }]}>
           R$ {balance.toFixed(2)}
         </Text>
       </View>
 
+      {/* Receita / Despesa */}
       <View style={styles.row}>
         <View style={[styles.summaryCard, { borderLeftColor: Colors.success }]}>
           <Ionicons name="arrow-up-circle" size={28} color={Colors.success} />
           <Text style={styles.summaryLabel}>Receitas</Text>
-          <Text style={[styles.summaryValue, { color: Colors.success }]}>R$ {income.toFixed(2)}</Text>
+          <Text style={[styles.summaryValue, { color: Colors.success }]}>
+            R$ {income.toFixed(2)}
+          </Text>
         </View>
         <View style={[styles.summaryCard, { borderLeftColor: Colors.error }]}>
           <Ionicons name="arrow-down-circle" size={28} color={Colors.error} />
           <Text style={styles.summaryLabel}>Despesas</Text>
-          <Text style={[styles.summaryValue, { color: Colors.error }]}>R$ {expense.toFixed(2)}</Text>
+          <Text style={[styles.summaryValue, { color: Colors.error }]}>
+            R$ {expense.toFixed(2)}
+          </Text>
         </View>
       </View>
 
-      {/* Navegação para sub-telas */}
+      {/* Módulos */}
       <Text style={styles.sectionTitle}>Módulos</Text>
-
       {[
-        { icon: 'swap-horizontal',  label: 'Transações',  sub: 'Receitas e despesas',    route: '/(barbeiro)/financeiro/transacoes' },
-        { icon: 'people',           label: 'Comissões',   sub: 'Comissões dos barbeiros', route: '/(barbeiro)/financeiro/comissoes' },
-        { icon: 'flag',             label: 'Metas',       sub: 'Acompanhe suas metas',   route: '/(barbeiro)/financeiro/metas' },
+        { icon: 'swap-horizontal', label: 'Transações',  sub: 'Receitas e despesas',     route: '/(barbeiro)/financeiro/transacoes' },
+        { icon: 'people',          label: 'Comissões',   sub: 'Comissões dos barbeiros',  route: '/(barbeiro)/financeiro/comissoes'  },
+        { icon: 'flag',            label: 'Metas',       sub: 'Acompanhe suas metas',    route: '/(barbeiro)/financeiro/metas'      },
       ].map(item => (
         <TouchableOpacity
           key={item.route}
@@ -99,15 +103,15 @@ export default function FinanceiroScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.md, gap: 16, paddingBottom: Spacing.xxl },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  content:   { padding: Spacing.md, gap: 16, paddingBottom: Spacing.xxl },
+  centered:  { flex: 1, alignItems: 'center', justifyContent: 'center' },
   balanceCard: {
     backgroundColor: Colors.primary, borderRadius: BorderRadius.xl,
     padding: Spacing.lg, alignItems: 'center',
   },
   balanceLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: '600' },
-  balanceValue: { fontSize: 36, fontWeight: '700', color: Colors.white, marginTop: 4 },
-  row: { flexDirection: 'row', gap: 12 },
+  balanceValue: { fontSize: 36, fontWeight: '700', marginTop: 4 },
+  row:          { flexDirection: 'row', gap: 12 },
   summaryCard: {
     flex: 1, backgroundColor: Colors.white, borderRadius: BorderRadius.lg,
     padding: Spacing.md, borderLeftWidth: 4, ...Shadow.sm,
@@ -126,7 +130,7 @@ const styles = StyleSheet.create({
     width: 48, height: 48, borderRadius: BorderRadius.lg,
     backgroundColor: '#faf5ff', alignItems: 'center', justifyContent: 'center',
   },
-  moduleInfo: { flex: 1 },
+  moduleInfo:  { flex: 1 },
   moduleLabel: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
-  moduleSub: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  moduleSub:   { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
 });
