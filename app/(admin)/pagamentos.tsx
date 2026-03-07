@@ -10,19 +10,21 @@ import api from '@/lib/api';
 import { Colors, Spacing, BorderRadius, Shadow } from '@/constants/colors';
 import { Badge } from '@/components/ui/Badge';
 
+// ── Tipos ─────────────────────────────────────────────────────────────────────
+
 type FilterType = 'all' | 'paid' | 'pending' | 'failed';
 
 interface Payment {
-  id: string;
+  id:             string;
   barbershopName: string;
-  ownerName: string;
-  plan: string;
-  interval: string;
-  amount: number;
-  status: 'paid' | 'pending' | 'failed' | 'refunded';
-  dueDate: string;
-  paidAt?: string;
-  method?: string;
+  ownerName:      string;
+  plan:           string;
+  interval:       string;
+  amount:         number;
+  status:         'paid' | 'pending' | 'failed' | 'refunded';
+  dueDate:        string;
+  paidAt?:        string;
+  method?:        string;
 }
 
 const STATUS_MAP: Record<string, { label: string; variant: any }> = {
@@ -38,17 +40,7 @@ const INTERVAL_LABELS: Record<string, string> = {
   annual:     'Anual',
 };
 
-// ── Calcula MRR localmente a partir dos pagamentos ────────────────────────────
-function calcMRR(payments: Payment[]): number {
-  return payments
-    .filter(p => p.status === 'paid')
-    .reduce((sum, p) => {
-      if (p.interval === 'monthly')    return sum + p.amount;
-      if (p.interval === 'semiannual') return sum + p.amount / 6;
-      if (p.interval === 'annual')     return sum + p.amount / 12;
-      return sum + p.amount;
-    }, 0);
-}
+// ── Componente principal ──────────────────────────────────────────────────────
 
 export default function PagamentosScreen() {
   const [payments,   setPayments]   = useState<Payment[]>([]);
@@ -60,9 +52,14 @@ export default function PagamentosScreen() {
 
   async function load() {
     try {
-      // ✅ Apenas /admin/payments — summary calculado localmente
       const res = await api.get('/admin/payments');
-      setPayments(res.data || []);
+      // Suporta shape { payments: [] } ou array direto
+      const raw = res.data;
+      const list: Payment[] = Array.isArray(raw)
+        ? raw
+        : Array.isArray(raw?.payments) ? raw.payments
+        : [];
+      setPayments(list);
     } catch (e) {
       console.error('Erro ao carregar pagamentos:', e);
     } finally {
@@ -76,11 +73,14 @@ export default function PagamentosScreen() {
     setRefreshing(false);
   }
 
-  const filtered     = payments.filter(p => filter === 'all' ? true : p.status === filter);
+  // ── Cálculos de resumo ───────────────────────────────────────────────────
+  const filtered     = payments.filter(p => filter === 'all' || p.status === filter);
   const totalPaid    = payments.filter(p => p.status === 'paid').reduce((s, p) => s + p.amount, 0);
   const totalPending = payments.filter(p => p.status === 'pending').reduce((s, p) => s + p.amount, 0);
-  const totalFailed  = payments.filter(p => p.status === 'failed').reduce((s, p) => s + p.amount, 0);
-  const mrr          = calcMRR(payments);
+  const totalCount   = payments.length;
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
   if (loading) {
     return (
@@ -92,158 +92,221 @@ export default function PagamentosScreen() {
 
   return (
     <View style={styles.container}>
+
+      {/* ── Header ──────────────────────────────────────────────────────────── */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Pagamentos</Text>
-        <Text style={styles.headerSub}>{payments.length} registros</Text>
+        <Text style={styles.headerSub}>Acompanhe todos os pagamentos</Text>
       </View>
 
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+        }
         showsVerticalScrollIndicator={false}
       >
-        {/* Cards resumo */}
+
+        {/* ── 3 Cards — idênticos ao web ──────────────────────────────────── */}
         <View style={styles.summaryRow}>
-          <View style={[styles.summaryCard, { borderTopColor: Colors.success }]}>
-            <Ionicons name="checkmark-circle" size={22} color={Colors.success} />
-            <Text style={styles.summaryLabel}>Recebido</Text>
-            <Text style={[styles.summaryValue, { color: Colors.success }]}>
-              R$ {totalPaid.toFixed(2)}
+
+          {/* Total Recebido */}
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryTop}>
+              <Text style={styles.summaryLabel}>Total Recebido</Text>
+              <Ionicons name="checkmark-circle" size={22} color={Colors.success} />
+            </View>
+            <Text style={styles.summaryValue}>{formatCurrency(totalPaid)}</Text>
+            <Text style={styles.summarySub}>
+              {payments.filter(p => p.status === 'paid').length} transação(ões)
             </Text>
           </View>
-          <View style={[styles.summaryCard, { borderTopColor: Colors.warning }]}>
-            <Ionicons name="time" size={22} color={Colors.warning} />
-            <Text style={styles.summaryLabel}>Pendente</Text>
-            <Text style={[styles.summaryValue, { color: Colors.warning }]}>
-              R$ {totalPending.toFixed(2)}
+
+          {/* Pendente */}
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryTop}>
+              <Text style={styles.summaryLabel}>Pendente</Text>
+              <Ionicons name="time" size={22} color={Colors.warning} />
+            </View>
+            <Text style={styles.summaryValue}>{formatCurrency(totalPending)}</Text>
+            <Text style={styles.summarySub}>
+              {payments.filter(p => p.status === 'pending').length} transação(ões)
             </Text>
           </View>
-          <View style={[styles.summaryCard, { borderTopColor: Colors.error }]}>
-            <Ionicons name="close-circle" size={22} color={Colors.error} />
-            <Text style={styles.summaryLabel}>Falhou</Text>
-            <Text style={[styles.summaryValue, { color: Colors.error }]}>
-              R$ {totalFailed.toFixed(2)}
-            </Text>
+
+          {/* Total (contagem) — igual ao web, substitui "Falhou" */}
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryTop}>
+              <Text style={styles.summaryLabel}>Total</Text>
+              <Ionicons name="clipboard" size={22} color="#2563eb" />
+            </View>
+            <Text style={styles.summaryValue}>{totalCount}</Text>
+            <Text style={styles.summarySub}>Transações</Text>
           </View>
+
         </View>
 
-        {/* MRR — calculado localmente */}
-        <View style={styles.mrrCard}>
-          <Text style={styles.mrrLabel}>MRR (Receita Mensal Recorrente)</Text>
-          <Text style={styles.mrrValue}>R$ {mrr.toFixed(2)}</Text>
-          <Text style={styles.mrrSub}>ARR: R$ {(mrr * 12).toFixed(2)}</Text>
+        {/* ── Filtro por Status — igual ao web ───────────────────────────── */}
+        <View style={styles.filterRow}>
+          <View style={styles.filterSelect}>
+            {([
+              { key: 'all',     label: 'Todos'     },
+              { key: 'paid',    label: 'Pagos'     },
+              { key: 'pending', label: 'Pendentes' },
+              { key: 'failed',  label: 'Falhou'    },
+            ] as { key: FilterType; label: string }[]).map(f => (
+              <TouchableOpacity
+                key={f.key}
+                style={[styles.filterOpt, filter === f.key && styles.filterOptActive]}
+                onPress={() => setFilter(f.key)}
+              >
+                <Text style={[styles.filterText, filter === f.key && styles.filterTextActive]}>
+                  {f.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          <TouchableOpacity style={styles.refreshBtn} onPress={onRefresh}>
+            <Text style={styles.refreshText}>Atualizar</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Filtros */}
-        <View style={styles.filters}>
-          {([
-            { key: 'all',     label: 'Todos'     },
-            { key: 'paid',    label: 'Pagos'     },
-            { key: 'pending', label: 'Pendentes' },
-            { key: 'failed',  label: 'Falhou'    },
-          ] as { key: FilterType; label: string }[]).map(f => (
-            <TouchableOpacity
-              key={f.key}
-              style={[styles.filterBtn, filter === f.key && styles.filterBtnActive]}
-              onPress={() => setFilter(f.key)}
-            >
-              <Text style={[styles.filterText, filter === f.key && styles.filterTextActive]}>
-                {f.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        {/* ── Tabela header ───────────────────────────────────────────────── */}
+        <View style={styles.tableHeader}>
+          <Text style={[styles.tableHeaderCell, { flex: 2 }]}>BARBEARIA</Text>
+          <Text style={styles.tableHeaderCell}>PLANO</Text>
+          <Text style={styles.tableHeaderCell}>VALOR</Text>
+          <Text style={styles.tableHeaderCell}>STATUS</Text>
         </View>
 
-        {/* Lista */}
+        {/* ── Lista ────────────────────────────────────────────────────────── */}
         {filtered.length === 0 ? (
           <View style={styles.empty}>
             <Ionicons name="card-outline" size={48} color={Colors.gray[300]} />
-            <Text style={styles.emptyText}>Nenhum pagamento encontrado</Text>
+            <Text style={styles.emptyTitle}>Nenhum pagamento encontrado</Text>
+            <Text style={styles.emptySubtitle}>Ajuste os filtros.</Text>
           </View>
         ) : (
-          filtered.map(p => {
-            const status = STATUS_MAP[p.status];
-            return (
-              <View key={p.id} style={styles.card}>
-                <View style={styles.cardTop}>
-                  <View style={styles.cardIcon}>
-                    <Ionicons name="card" size={22} color={Colors.primary} />
-                  </View>
-                  <View style={styles.cardInfo}>
-                    <Text style={styles.cardName}>{p.barbershopName}</Text>
-                    <Text style={styles.cardOwner}>{p.ownerName}</Text>
-                    <Text style={styles.cardPlan}>
-                      {p.plan} • {INTERVAL_LABELS[p.interval] || p.interval}
-                    </Text>
-                  </View>
-                  <View style={styles.cardRight}>
-                    <Text style={styles.cardAmount}>R$ {Number(p.amount).toFixed(2)}</Text>
-                    <Badge label={status.label} variant={status.variant} />
-                  </View>
-                </View>
-                <View style={styles.cardMeta}>
-                  <View style={styles.metaItem}>
-                    <Ionicons name="calendar-outline" size={13} color={Colors.textSecondary} />
-                    <Text style={styles.metaText}>
-                      Vence: {format(new Date(p.dueDate), 'dd/MM/yyyy', { locale: ptBR })}
-                    </Text>
-                  </View>
-                  {!!p.paidAt && (
-                    <View style={styles.metaItem}>
-                      <Ionicons name="checkmark-circle-outline" size={13} color={Colors.success} />
-                      <Text style={styles.metaText}>
-                        Pago: {format(new Date(p.paidAt), 'dd/MM/yyyy', { locale: ptBR })}
+          <View style={styles.tableBody}>
+            {filtered.map(p => {
+              const statusInfo = STATUS_MAP[p.status] || { label: p.status, variant: 'gray' };
+              return (
+                <View key={p.id} style={styles.tableRow}>
+                  <View style={{ flex: 2 }}>
+                    <Text style={styles.rowName} numberOfLines={1}>{p.barbershopName}</Text>
+                    {!!p.paidAt && (
+                      <Text style={styles.rowDate}>
+                        {format(new Date(p.paidAt), 'dd/MM/yyyy', { locale: ptBR })}
                       </Text>
-                    </View>
-                  )}
-                  {!!p.method && (
-                    <View style={styles.metaItem}>
-                      <Ionicons name="wallet-outline" size={13} color={Colors.textSecondary} />
-                      <Text style={styles.metaText}>{p.method}</Text>
-                    </View>
-                  )}
+                    )}
+                    {!p.paidAt && !!p.dueDate && (
+                      <Text style={styles.rowDate}>
+                        Vence: {format(new Date(p.dueDate), 'dd/MM/yyyy', { locale: ptBR })}
+                      </Text>
+                    )}
+                    {!!p.method && (
+                      <Text style={styles.rowMeta}>{p.method}</Text>
+                    )}
+                  </View>
+                  <View style={{ alignItems: 'center' }}>
+                    <Text style={styles.rowPlan}>{p.plan}</Text>
+                    <Text style={styles.rowInterval}>{INTERVAL_LABELS[p.interval] || p.interval}</Text>
+                  </View>
+                  <Text style={styles.rowAmount}>
+                    {formatCurrency(Number(p.amount))}
+                  </Text>
+                  <Badge label={statusInfo.label} variant={statusInfo.variant} />
                 </View>
-              </View>
-            );
-          })
+              );
+            })}
+          </View>
         )}
+
+        <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
 }
 
+// ── Estilos ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: Colors.background },
-  centered:     { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header:       { backgroundColor: Colors.white, paddingHorizontal: Spacing.md, paddingTop: 56, paddingBottom: Spacing.md, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  headerTitle:  { fontSize: 22, fontWeight: '700', color: Colors.textPrimary },
-  headerSub:    { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
-  content:      { padding: Spacing.md, gap: 14, paddingBottom: 40 },
-  summaryRow:   { flexDirection: 'row', gap: 8 },
-  summaryCard:  { flex: 1, backgroundColor: Colors.white, borderRadius: BorderRadius.lg, padding: Spacing.sm, borderTopWidth: 3, ...Shadow.sm, borderWidth: 1, borderColor: Colors.border, gap: 2, alignItems: 'center' },
-  summaryLabel: { fontSize: 11, color: Colors.textSecondary, fontWeight: '500' },
-  summaryValue: { fontSize: 14, fontWeight: '700' },
-  mrrCard:      { backgroundColor: Colors.primary, borderRadius: BorderRadius.xl, padding: Spacing.lg, alignItems: 'center', gap: 4 },
-  mrrLabel:     { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '600' },
-  mrrValue:     { color: Colors.white, fontSize: 32, fontWeight: '700' },
-  mrrSub:       { color: 'rgba(255,255,255,0.7)', fontSize: 13 },
-  filters:      { flexDirection: 'row', backgroundColor: Colors.gray[100], borderRadius: BorderRadius.lg, padding: 4, gap: 4 },
-  filterBtn:    { flex: 1, paddingVertical: 8, alignItems: 'center', borderRadius: BorderRadius.md },
-  filterBtnActive: { backgroundColor: Colors.white },
-  filterText:   { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
-  filterTextActive: { color: Colors.primary },
-  empty:        { alignItems: 'center', paddingTop: 40, gap: 12 },
-  emptyText:    { fontSize: 15, color: Colors.textSecondary },
-  card:         { backgroundColor: Colors.white, borderRadius: BorderRadius.xl, padding: Spacing.md, ...Shadow.sm, borderWidth: 1, borderColor: Colors.border, gap: 10 },
-  cardTop:      { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  cardIcon:     { width: 44, height: 44, borderRadius: BorderRadius.md, backgroundColor: '#faf5ff', alignItems: 'center', justifyContent: 'center' },
-  cardInfo:     { flex: 1 },
-  cardName:     { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
-  cardOwner:    { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  cardPlan:     { fontSize: 11, color: Colors.textMuted, marginTop: 1 },
-  cardRight:    { alignItems: 'flex-end', gap: 4 },
-  cardAmount:   { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
-  cardMeta:     { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingTop: 8, borderTopWidth: 1, borderTopColor: Colors.border },
-  metaItem:     { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText:     { fontSize: 12, color: Colors.textSecondary },
+  container: { flex: 1, backgroundColor: '#f3f4f6' },
+  centered:  { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
+  header: {
+    backgroundColor: Colors.white,
+    paddingHorizontal: Spacing.md,
+    paddingTop: 56,
+    paddingBottom: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  headerTitle: { fontSize: 22, fontWeight: '700', color: '#111827' },
+  headerSub:   { fontSize: 13, color: '#6b7280', marginTop: 2 },
+
+  content: { padding: Spacing.md, gap: 14, paddingBottom: 20 },
+
+  // 3 cards de resumo
+  summaryRow: { flexDirection: 'row', gap: 10 },
+  summaryCard: {
+    flex: 1, backgroundColor: Colors.white, borderRadius: BorderRadius.lg,
+    padding: Spacing.sm, ...Shadow.sm,
+    borderWidth: 1, borderColor: '#e5e7eb', gap: 4,
+  },
+  summaryTop:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  summaryLabel: { fontSize: 11, color: '#6b7280', fontWeight: '500' },
+  summaryValue: { fontSize: 16, fontWeight: '700', color: '#111827' },
+  summarySub:   { fontSize: 10, color: '#9ca3af' },
+
+  // Filtro + botão Atualizar
+  filterRow: {
+    flexDirection: 'row', gap: 10, alignItems: 'center',
+    backgroundColor: Colors.white, borderRadius: BorderRadius.lg,
+    padding: Spacing.sm, borderWidth: 1, borderColor: '#e5e7eb', ...Shadow.sm,
+  },
+  filterSelect: { flex: 1, flexDirection: 'row', gap: 4 },
+  filterOpt: {
+    flex: 1, paddingVertical: 8, alignItems: 'center',
+    borderRadius: BorderRadius.sm, backgroundColor: '#f3f4f6',
+  },
+  filterOptActive: { backgroundColor: Colors.primary },
+  filterText:      { fontSize: 11, fontWeight: '600', color: '#6b7280' },
+  filterTextActive: { color: Colors.white },
+  refreshBtn: {
+    backgroundColor: Colors.primary, borderRadius: BorderRadius.md,
+    paddingVertical: 8, paddingHorizontal: 14,
+  },
+  refreshText: { color: Colors.white, fontWeight: '700', fontSize: 13 },
+
+  // Tabela
+  tableHeader: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: Spacing.sm, paddingVertical: 8,
+    backgroundColor: '#f9fafb',
+    borderRadius: BorderRadius.sm,
+    gap: 8,
+  },
+  tableHeaderCell: { fontSize: 11, fontWeight: '700', color: '#9ca3af', flex: 1, textAlign: 'center' },
+  tableBody: {
+    backgroundColor: Colors.white, borderRadius: BorderRadius.xl,
+    borderWidth: 1, borderColor: '#e5e7eb', ...Shadow.sm, overflow: 'hidden',
+  },
+  tableRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 12, paddingHorizontal: Spacing.sm,
+    borderBottomWidth: 1, borderBottomColor: '#f3f4f6',
+    gap: 8,
+  },
+  rowName:     { fontSize: 13, fontWeight: '600', color: '#111827' },
+  rowDate:     { fontSize: 11, color: '#6b7280', marginTop: 2 },
+  rowMeta:     { fontSize: 10, color: '#9ca3af', marginTop: 1 },
+  rowPlan:     { fontSize: 11, fontWeight: '700', color: '#111827', textAlign: 'center' },
+  rowInterval: { fontSize: 10, color: '#6b7280', textAlign: 'center' },
+  rowAmount:   { fontSize: 14, fontWeight: '700', color: '#111827', flex: 1, textAlign: 'right' },
+
+  // Empty
+  empty:        { alignItems: 'center', paddingVertical: 48, gap: 8 },
+  emptyTitle:   { fontSize: 15, fontWeight: '600', color: '#6b7280' },
+  emptySubtitle: { fontSize: 13, color: '#9ca3af' },
 });

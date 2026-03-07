@@ -5,11 +5,12 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { BarChart } from 'react-native-gifted-charts';
 import api from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 import { Colors, Spacing, BorderRadius, Shadow } from '@/constants/colors';
 
-// ── Tipos espelhando 100% o shape real de admin.routes.ts ────────────────────
+// ── Tipos espelhando 100% o shape real da API ─────────────────────────────────
 
 interface DashboardResponse {
   barbershops: {
@@ -18,8 +19,8 @@ interface DashboardResponse {
     expired:      number;
     newThisMonth: number;
   };
-  users:     { total: number };
-  customers: { total: number };
+  users:        { total: number };
+  customers:    { total: number };
   appointments: { total: number };
   subscriptions: {
     active:  number;
@@ -39,21 +40,29 @@ interface PlanStats {
   expiringSoon: number;
 }
 
-// ── Componente ───────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(value);
+}
+
+// ── Componente principal ──────────────────────────────────────────────────────
 
 export default function AdminDashboardScreen() {
   const { barberUser, barberSignOut } = useAuthStore();
 
-  const [dashboard,   setDashboard]   = useState<DashboardResponse | null>(null);
-  const [planStats,   setPlanStats]   = useState<PlanStats | null>(null);
-  const [loading,     setLoading]     = useState(true);
-  const [refreshing,  setRefreshing]  = useState(false);
+  const [dashboard,  setDashboard]  = useState<DashboardResponse | null>(null);
+  const [planStats,  setPlanStats]  = useState<PlanStats | null>(null);
+  const [loading,    setLoading]    = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => { load(); }, []);
 
   async function load() {
     try {
-      // ✅ Dois endpoints paralelos — shapes 100% mapeados do admin.routes.ts
       const [dashRes, planRes] = await Promise.all([
         api.get<DashboardResponse>('/admin/dashboard'),
         api.get<PlanStats>('/admin/plan-stats'),
@@ -95,227 +104,286 @@ export default function AdminDashboardScreen() {
     );
   }
 
-  // Atalhos rápidos para campos usados repetidamente
   const bs  = dashboard?.barbershops;
   const rev = dashboard?.revenue;
   const sub = dashboard?.subscriptions;
+
+  // Dados do gráfico — mesmo shape do BarbershopsStatsChart.tsx do web
+  const barData = [
+    { value: planStats?.active       || 0, label: 'Ativas',    frontColor: '#10b981' },
+    { value: planStats?.expired      || 0, label: 'Expiradas', frontColor: '#ef4444' },
+    { value: planStats?.trial        || 0, label: 'Trial',     frontColor: '#3b82f6' },
+    { value: planStats?.expiringSoon || 0, label: 'Expirando', frontColor: '#f59e0b' },
+  ];
 
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+      }
       showsVerticalScrollIndicator={false}
     >
-      {/* Header */}
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>⚡ Super Admin</Text>
-          <Text style={styles.headerSub}>Olá, {barberUser?.name?.split(' ')[0]}!</Text>
+          <Text style={styles.headerTitle}>Dashboard Administrativo</Text>
+          <Text style={styles.headerSub}>Visão geral do sistema BarberFlow</Text>
         </View>
         <TouchableOpacity onPress={handleSignOut} style={styles.logoutBtn}>
           <Ionicons name="log-out-outline" size={22} color={Colors.error} />
         </TouchableOpacity>
       </View>
 
-      {/* Voltar ao Dashboard da Barbearia */}
+      {/* ── Voltar ao Dashboard da Barbearia ───────────────────────────────── */}
       <TouchableOpacity
         style={styles.backToDashBtn}
         onPress={() => router.replace('/(barbeiro)')}
         activeOpacity={0.85}
       >
-        <Ionicons name="storefront-outline" size={20} color={Colors.white} />
-        <Text style={styles.backToDashText}>Voltar ao Dashboard da Barbearia</Text>
-        <Ionicons name="arrow-forward" size={18} color={Colors.white} />
+        <Ionicons name="arrow-back" size={18} color={Colors.white} />
+        <Text style={styles.backToDashText}>Voltar ao Dashboard</Text>
       </TouchableOpacity>
 
-      {/* ── Barbearias ─────────────────────────────────────────────────────── */}
-      <Text style={styles.sectionTitle}>Barbearias</Text>
-      <View style={styles.grid}>
-        <StatCard label="Total"     value={bs?.total   || 0} icon="storefront"       color={Colors.primary} bg="#faf5ff" />
-        <StatCard label="Ativas"    value={bs?.active   || 0} icon="checkmark-circle" color={Colors.success} bg={Colors.successBg} />
-      </View>
-      <View style={styles.grid}>
-        <StatCard label="Expiradas" value={bs?.expired  || 0} icon="close-circle"    color={Colors.error}   bg={Colors.errorBg}   />
-        <StatCard label="Trial"     value={planStats?.trial || 0} icon="time"        color={Colors.warning} bg={Colors.warningBg} />
-      </View>
+      {/* ── 4 Cards do topo — idênticos ao web ─────────────────────────────── */}
+      <View style={styles.cardsGrid}>
 
-      {/* Expirando em breve — só mostra se > 0 */}
-      {(planStats?.expiringSoon || 0) > 0 && (
-        <View style={styles.alertBanner}>
-          <Ionicons name="warning" size={18} color={Colors.warning} />
-          <Text style={styles.alertText}>
-            {planStats!.expiringSoon} barbearia{planStats!.expiringSoon > 1 ? 's' : ''} expira{planStats!.expiringSoon === 1 ? '' : 'm'} em até 7 dias
-          </Text>
-        </View>
-      )}
-
-      {/* ── Usuários & Clientes ─────────────────────────────────────────────── */}
-      <Text style={styles.sectionTitle}>Usuários</Text>
-      <View style={styles.grid}>
-        <StatCard label="Barbeiros"     value={dashboard?.users.total      || 0} icon="cut"    color="#2563eb"       bg="#eff6ff" />
-        <StatCard label="Clientes"      value={dashboard?.customers.total  || 0} icon="people" color={Colors.warning} bg={Colors.warningBg} />
-      </View>
-      <View style={styles.grid}>
-        <StatCard label="Agendamentos"  value={dashboard?.appointments.total || 0} icon="calendar" color="#7c3aed" bg="#f5f3ff" />
-        <StatCard label="Novas p/ mês"  value={bs?.newThisMonth || 0} icon="trending-up" color={Colors.success} bg={Colors.successBg} />
-      </View>
-
-      {/* ── Receita ─────────────────────────────────────────────────────────── */}
-      <Text style={styles.sectionTitle}>Receita</Text>
-      <View style={styles.revenueCard}>
-        <View style={styles.revenueItem}>
-          <Text style={styles.revenueLabel}>MRR</Text>
-          <Text style={[styles.revenueValue, { color: Colors.primary }]}>
-            R$ {Number(rev?.mrr || 0).toFixed(2)}
-          </Text>
-        </View>
-        <View style={styles.revenueDivider} />
-        <View style={styles.revenueItem}>
-          <Text style={styles.revenueLabel}>Este Mês</Text>
-          <Text style={styles.revenueValue}>
-            R$ {Number(rev?.thisMonth || 0).toFixed(2)}
-          </Text>
-        </View>
-        <View style={styles.revenueDivider} />
-        <View style={styles.revenueItem}>
-          <Text style={styles.revenueLabel}>Total</Text>
-          <Text style={styles.revenueValue}>
-            R$ {Number(rev?.total || 0).toFixed(2)}
-          </Text>
-        </View>
-      </View>
-
-      {/* ── Assinaturas ─────────────────────────────────────────────────────── */}
-      <View style={styles.grid}>
-        <View style={[styles.metricCard, { borderLeftColor: Colors.success }]}>
-          <Ionicons name="checkmark-circle-outline" size={22} color={Colors.success} />
-          <Text style={styles.metricValue}>{sub?.active || 0}</Text>
-          <Text style={styles.metricLabel}>Assinaturas Ativas</Text>
-        </View>
-        <View style={[styles.metricCard, { borderLeftColor: Colors.warning }]}>
-          <Ionicons name="time-outline" size={22} color={Colors.warning} />
-          <Text style={styles.metricValue}>{sub?.pending || 0}</Text>
-          <Text style={styles.metricLabel}>Pendentes</Text>
-        </View>
-      </View>
-
-      {/* ── Acesso Rápido ───────────────────────────────────────────────────── */}
-      <Text style={styles.sectionTitle}>Acesso Rápido</Text>
-      <View style={styles.actions}>
-        {[
-          { icon: 'storefront-outline', label: 'Barbearias', sub: 'Gerencie e visualize todas', route: '/(admin)/barbearias' },
-          { icon: 'card-outline',       label: 'Pagamentos', sub: 'Acompanhe os pagamentos',   route: '/(admin)/pagamentos' },
-        ].map(item => (
-          <TouchableOpacity
-            key={item.label}
-            style={styles.actionCard}
-            onPress={() => router.push(item.route as any)}
-            activeOpacity={0.8}
-          >
-            <View style={styles.actionIcon}>
-              <Ionicons name={item.icon as any} size={26} color={Colors.primary} />
+        {/* Barbearias Ativas */}
+        <View style={styles.statCard}>
+          <View style={styles.statCardTop}>
+            <View style={[styles.statIcon, { backgroundColor: '#dcfce7' }]}>
+              <Ionicons name="checkmark-circle" size={22} color="#16a34a" />
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.actionLabel}>{item.label}</Text>
-              <Text style={styles.actionSub}>{item.sub}</Text>
+            <Text style={[styles.statBadge, { color: '#16a34a' }]}>Ativas</Text>
+          </View>
+          <Text style={styles.statLabel}>Barbearias Ativas</Text>
+          <Text style={styles.statValue}>{bs?.active || 0}</Text>
+          <Text style={styles.statSub}>Total: {bs?.total || 0}</Text>
+        </View>
+
+        {/* Barbearias Expiradas */}
+        <View style={styles.statCard}>
+          <View style={styles.statCardTop}>
+            <View style={[styles.statIcon, { backgroundColor: '#fee2e2' }]}>
+              <Ionicons name="alert-circle" size={22} color="#dc2626" />
             </View>
-            <Ionicons name="chevron-forward" size={18} color={Colors.gray[400]} />
+            <Text style={[styles.statBadge, { color: '#dc2626' }]}>Expiradas</Text>
+          </View>
+          <Text style={styles.statLabel}>Barbearias Expiradas</Text>
+          <Text style={styles.statValue}>{bs?.expired || 0}</Text>
+          <Text style={styles.statSub}>Sem acesso ao sistema</Text>
+        </View>
+
+        {/* MRR */}
+        <View style={styles.statCard}>
+          <View style={styles.statCardTop}>
+            <View style={[styles.statIcon, { backgroundColor: '#dcfce7' }]}>
+              <Ionicons name="cash" size={22} color="#16a34a" />
+            </View>
+          </View>
+          <Text style={styles.statLabel}>MRR</Text>
+          <Text style={[styles.statValue, { fontSize: 18 }]}>
+            {formatCurrency(rev?.mrr || 0)}
+          </Text>
+          <Text style={styles.statSub}>Mês: {formatCurrency(rev?.thisMonth || 0)}</Text>
+        </View>
+
+        {/* Assinaturas */}
+        <View style={styles.statCard}>
+          <View style={styles.statCardTop}>
+            <View style={[styles.statIcon, { backgroundColor: '#dbeafe' }]}>
+              <Ionicons name="checkmark-circle" size={22} color="#2563eb" />
+            </View>
+            {(sub?.pending || 0) > 0 && (
+              <Text style={[styles.statBadge, { color: '#ea580c' }]}>{sub!.pending}</Text>
+            )}
+          </View>
+          <Text style={styles.statLabel}>Assinaturas</Text>
+          <Text style={styles.statValue}>{sub?.active || 0}</Text>
+          <Text style={styles.statSub}>Ativas</Text>
+        </View>
+
+      </View>
+
+      {/* ── Gráfico: Status das Barbearias ─────────────────────────────────── */}
+      <View style={styles.chartCard}>
+        <View style={styles.chartHeader}>
+          <View>
+            <Text style={styles.chartTitle}>Status das Barbearias</Text>
+            <Text style={styles.chartSub}>Distribuição por status de plano</Text>
+          </View>
+          <TouchableOpacity onPress={load}>
+            <Text style={styles.chartRefresh}>Atualizar</Text>
           </TouchableOpacity>
-        ))}
+        </View>
+
+        <BarChart
+          data={barData}
+          barWidth={48}
+          spacing={24}
+          roundedTop
+          hideRules={false}
+          rulesColor="#e5e7eb"
+          xAxisColor="#9ca3af"
+          yAxisColor="#9ca3af"
+          xAxisLabelTextStyle={{ color: '#6b7280', fontSize: 11 }}
+          yAxisTextStyle={{ color: '#6b7280', fontSize: 11 }}
+          noOfSections={4}
+          height={200}
+          isAnimated
+        />
+
+        {/* Legendas — mesmas do web */}
+        <View style={styles.legendRow}>
+          {barData.map(item => (
+            <View key={item.label} style={styles.legendItem}>
+              <View style={[styles.legendDot, { backgroundColor: item.frontColor }]} />
+              <Text style={styles.legendLabel}>{item.label}</Text>
+              <Text style={styles.legendValue}>{item.value}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* ── Receita Total — gradiente roxo igual ao web ─────────────────────── */}
+      <View style={styles.revenueCard}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.revenueLabel}>Receita Total Acumulada</Text>
+          <Text style={styles.revenueValue}>{formatCurrency(rev?.total || 0)}</Text>
+        </View>
+        <View style={styles.revenueIcon}>
+          <Ionicons name="trending-up" size={32} color="rgba(255,255,255,0.9)" />
+        </View>
+      </View>
+
+      {/* ── Ações Rápidas — 3 cards igual ao web ───────────────────────────── */}
+      <Text style={styles.sectionTitle}>Ações Rápidas</Text>
+      <View style={styles.actionsGrid}>
+
+        <TouchableOpacity
+          style={styles.actionCard}
+          onPress={() => router.push('/(admin)/barbearias' as any)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.actionLabel}>Ver Todas as Barbearias</Text>
+          <Text style={styles.actionSub}>Gerencie e visualize todas</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionCard}
+          onPress={() => router.push('/(admin)/pagamentos' as any)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.actionLabel}>Ver Pagamentos</Text>
+          <Text style={styles.actionSub}>Acompanhe os pagamentos</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.actionCard}
+          onPress={load}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.actionLabel}>Atualizar Dados</Text>
+          <Text style={styles.actionSub}>Recarregar estatísticas</Text>
+        </TouchableOpacity>
+
       </View>
     </ScrollView>
-  );
-}
-
-// ── Sub-componente ────────────────────────────────────────────────────────────
-
-function StatCard({ label, value, icon, color, bg }: {
-  label: string; value: number; icon: string; color: string; bg: string;
-}) {
-  return (
-    <View style={[styles.statCard, { backgroundColor: bg }]}>
-      <View style={[styles.statIcon, { backgroundColor: color + '20' }]}>
-        <Ionicons name={icon as any} size={22} color={color} />
-      </View>
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={styles.statValue}>{value}</Text>
-    </View>
   );
 }
 
 // ── Estilos ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  container:   { flex: 1, backgroundColor: Colors.background },
-  content:     { padding: Spacing.md, gap: 12, paddingBottom: Spacing.xxl },
+  container:   { flex: 1, backgroundColor: '#f3f4f6' },
+  content:     { padding: Spacing.md, gap: 16, paddingBottom: 40 },
   centered:    { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   loadingText: { color: Colors.textSecondary, fontSize: 14 },
 
+  // Header
   header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    backgroundColor: Colors.white, borderRadius: BorderRadius.xl,
-    padding: Spacing.md, ...Shadow.sm, borderWidth: 1, borderColor: Colors.border,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
   },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: Colors.primary },
-  headerSub:   { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
-  logoutBtn:   { padding: 8 },
+  headerTitle: { fontSize: 22, fontWeight: '700', color: '#111827' },
+  headerSub:   { fontSize: 13, color: '#6b7280', marginTop: 4 },
+  logoutBtn:   { padding: 4 },
 
+  // Botão voltar
   backToDashBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, backgroundColor: Colors.navy, borderRadius: BorderRadius.xl,
-    padding: Spacing.md, ...Shadow.sm,
-  },
-  backToDashText: {
-    flex: 1, color: Colors.white, fontWeight: '700', fontSize: 14, textAlign: 'center',
-  },
-
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, marginTop: 4 },
-
-  grid: { flexDirection: 'row', gap: 12 },
-  statCard: {
-    flex: 1, borderRadius: BorderRadius.lg, padding: Spacing.md,
-    ...Shadow.sm, borderWidth: 1, borderColor: Colors.border,
-  },
-  statIcon:  { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  statLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: '500', marginBottom: 4 },
-  statValue: { fontSize: 26, fontWeight: '700', color: Colors.textPrimary },
-
-  alertBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: Colors.warningBg, borderRadius: BorderRadius.md,
-    padding: Spacing.sm, borderLeftWidth: 4, borderLeftColor: Colors.warning,
+    backgroundColor: '#1f2937', borderRadius: BorderRadius.lg,
+    paddingVertical: 10, paddingHorizontal: Spacing.md,
   },
-  alertText: { flex: 1, fontSize: 13, color: Colors.warning, fontWeight: '600' },
+  backToDashText: { color: Colors.white, fontWeight: '600', fontSize: 14 },
 
+  // Grid 2 colunas dos 4 cards
+  cardsGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 12,
+  },
+  statCard: {
+    width: '47.5%',
+    backgroundColor: Colors.white, borderRadius: BorderRadius.lg,
+    padding: Spacing.md, ...Shadow.sm,
+    borderWidth: 1, borderColor: '#e5e7eb', gap: 4,
+  },
+  statCardTop: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', marginBottom: 8,
+  },
+  statIcon: {
+    width: 44, height: 44, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  statBadge: { fontSize: 12, fontWeight: '600' },
+  statLabel: { fontSize: 12, color: '#6b7280' },
+  statValue: { fontSize: 26, fontWeight: '700', color: '#111827' },
+  statSub:   { fontSize: 12, color: '#9ca3af', marginTop: 4 },
+
+  // Gráfico
+  chartCard: {
+    backgroundColor: Colors.white, borderRadius: BorderRadius.xl,
+    padding: Spacing.md, ...Shadow.sm,
+    borderWidth: 1, borderColor: '#e5e7eb',
+  },
+  chartHeader: {
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'flex-start', marginBottom: 16,
+  },
+  chartTitle:   { fontSize: 16, fontWeight: '700', color: '#111827' },
+  chartSub:     { fontSize: 12, color: '#6b7280', marginTop: 2 },
+  chartRefresh: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
+  legendRow:    { flexDirection: 'row', justifyContent: 'space-around', marginTop: 16 },
+  legendItem:   { alignItems: 'center', gap: 4 },
+  legendDot:    { width: 10, height: 10, borderRadius: 5 },
+  legendLabel:  { fontSize: 11, color: '#6b7280', fontWeight: '500' },
+  legendValue:  { fontSize: 20, fontWeight: '700', color: '#111827' },
+
+  // Card receita roxa
   revenueCard: {
-    backgroundColor: Colors.white, borderRadius: BorderRadius.xl,
-    padding: Spacing.md, flexDirection: 'row', alignItems: 'center',
-    ...Shadow.sm, borderWidth: 1, borderColor: Colors.border,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#7c3aed',
+    ...Shadow.sm,
   },
-  revenueItem:    { flex: 1, alignItems: 'center', gap: 4 },
-  revenueLabel:   { fontSize: 11, color: Colors.textSecondary, fontWeight: '500' },
-  revenueValue:   { fontSize: 17, fontWeight: '700', color: Colors.textPrimary },
-  revenueDivider: { width: 1, height: 40, backgroundColor: Colors.border },
-
-  metricCard: {
-    flex: 1, backgroundColor: Colors.white, borderRadius: BorderRadius.lg,
-    padding: Spacing.md, borderLeftWidth: 4, ...Shadow.sm,
-    borderWidth: 1, borderColor: Colors.border, gap: 4,
+  revenueLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 13, marginBottom: 6 },
+  revenueValue: { color: Colors.white, fontSize: 32, fontWeight: '700' },
+  revenueIcon:  {
+    width: 64, height: 64, borderRadius: 32,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center', justifyContent: 'center',
   },
-  metricValue: { fontSize: 24, fontWeight: '700', color: Colors.textPrimary },
-  metricLabel: { fontSize: 12, color: Colors.textSecondary },
 
-  actions:    { gap: 10 },
+  // Ações rápidas
+  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827' },
+  actionsGrid:  { gap: 10 },
   actionCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    backgroundColor: Colors.white, borderRadius: BorderRadius.xl,
-    padding: Spacing.md, ...Shadow.sm, borderWidth: 1, borderColor: Colors.border,
+    backgroundColor: Colors.white, borderRadius: BorderRadius.lg,
+    padding: Spacing.md, ...Shadow.sm,
+    borderWidth: 1, borderColor: '#e5e7eb',
   },
-  actionIcon: {
-    width: 50, height: 50, borderRadius: BorderRadius.lg,
-    backgroundColor: '#faf5ff', alignItems: 'center', justifyContent: 'center',
-  },
-  actionLabel: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
-  actionSub:   { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  actionLabel: { fontSize: 15, fontWeight: '600', color: '#111827', marginBottom: 4 },
+  actionSub:   { fontSize: 12, color: '#6b7280' },
 });
