@@ -13,45 +13,50 @@ import { RevenueChart } from '@/components/barbeiro/RevenueChart';
 import { AppointmentsChart } from '@/components/barbeiro/AppointmentsChart';
 import { useAuthStore } from '@/stores/authStore';
 
+// ─── Tipos ────────────────────────────────────────────────────────────────────
+
 interface DashboardStats {
-  totalCustomers: number;
-  totalServices: number;
-  todayAppointments: number;
-  monthRevenue: number;
+  totalCustomers:       number;
+  totalServices:        number;
+  todayAppointments:    number;
+  monthRevenue:         number;
   upcomingAppointments: any[];
 }
 
 interface ChartData {
-  revenueChart: Array<{ month: string; revenue: number }>;
-  appointmentsChart: Array<{ date: string; count: number }>;
-  topServices: Array<{ name: string; count: number; revenue: number }>;
-  occupancyRate: string;
+  revenueChart:       Array<{ month: string; revenue: number }>;
+  appointmentsChart:  Array<{ date: string; count: number }>;
+  topServices:        Array<{ name: string; count: number; revenue: number }>;
+  occupancyRate:      string;
   comparison: {
-    currentMonth: { revenue: number; appointments: number };
+    currentMonth:  { revenue: number; appointments: number };
     previousMonth: { revenue: number; appointments: number };
-    growth: { revenue: string; appointments: string };
+    growth:        { revenue: string; appointments: string };
   };
 }
 
 interface PlanStatus {
-  plan: string;
-  isExpired: boolean;
+  plan:           string;
+  isExpired:      boolean;
   isExpiringSoon: boolean;
-  daysRemaining: number;
+  daysRemaining:  number;
 }
+
+// ─── Tela principal ───────────────────────────────────────────────────────────
 
 export default function DashboardScreen() {
   const { barberUser } = useAuthStore();
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [charts, setCharts] = useState<ChartData | null>(null);
+  const [stats,      setStats]      = useState<DashboardStats | null>(null);
+  const [charts,     setCharts]     = useState<ChartData | null>(null);
   const [planStatus, setPlanStatus] = useState<PlanStatus | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => { loadData(); }, []);
 
   async function loadData() {
     try {
+      // ✅ GET /barbershop/plan-status
       const planRes = await api.get('/barbershop/plan-status');
       setPlanStatus(planRes.data);
 
@@ -60,6 +65,7 @@ export default function DashboardScreen() {
         return;
       }
 
+      // ✅ GET /dashboard/stats  +  GET /dashboard/charts
       const [statsRes, chartsRes] = await Promise.all([
         api.get('/dashboard/stats'),
         api.get('/dashboard/charts'),
@@ -79,6 +85,7 @@ export default function DashboardScreen() {
     setRefreshing(false);
   }
 
+  // ── Loading ──────────────────────────────────────────────────────────────
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -88,7 +95,7 @@ export default function DashboardScreen() {
     );
   }
 
-  // Plano expirado
+  // ── Plano expirado ───────────────────────────────────────────────────────
   if (planStatus?.isExpired) {
     return (
       <View style={styles.centered}>
@@ -111,14 +118,23 @@ export default function DashboardScreen() {
     a => a?.customer && a?.service && a?.barber
   ) || [];
 
+  // Ocupação — converte string "75.5%" → número 75.5
+  const occupancyNum = parseFloat(String(charts?.occupancyRate || '0').replace('%', ''));
+
+  // Top 3 serviços
+  const topServices = charts?.topServices?.slice(0, 3) || [];
+  const maxCount    = topServices.length > 0 ? Math.max(...topServices.map(s => s.count), 1) : 1;
+
   return (
     <ScrollView
       style={styles.container}
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+      }
       showsVerticalScrollIndicator={false}
     >
-      {/* Alerta de expiração */}
+      {/* ── Alerta de expiração (≤ 7 dias) ──────────────────────────────── */}
       {planStatus?.isExpiringSoon && (
         <TouchableOpacity
           style={styles.alertBanner}
@@ -126,12 +142,13 @@ export default function DashboardScreen() {
         >
           <Ionicons name="warning" size={20} color={Colors.warning} />
           <Text style={styles.alertText}>
-            Seu plano expira em {planStatus.daysRemaining} dias! Toque para renovar.
+            Seu plano expira em {planStatus.daysRemaining}{' '}
+            {planStatus.daysRemaining === 1 ? 'dia' : 'dias'}! Toque para renovar.
           </Text>
         </TouchableOpacity>
       )}
 
-      {/* Saudação */}
+      {/* ── Saudação ─────────────────────────────────────────────────────── */}
       <View style={styles.greeting}>
         <Text style={styles.greetingText}>
           Olá, {barberUser?.name?.split(' ')[0]}! 👋
@@ -141,7 +158,7 @@ export default function DashboardScreen() {
         </Text>
       </View>
 
-      {/* Cards de Stats — fiel ao web (grid 2x2) */}
+      {/* ── Cards de Stats (grid 2×2) — idêntico ao web ──────────────────── */}
       <View style={styles.statsGrid}>
         <StatCard
           label="Clientes"
@@ -174,20 +191,123 @@ export default function DashboardScreen() {
         />
       </View>
 
-      {/* Ações Rápidas */}
+      {/* ── Ações Rápidas ─────────────────────────────────────────────────── */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Ações Rápidas</Text>
         <View style={styles.quickActions}>
-          <QuickAction icon="calendar" label="Agendamentos" onPress={() => router.push('/(barbeiro)/agendamentos')} />
-          <QuickAction icon="people"   label="Clientes"     onPress={() => router.push('/(barbeiro)/clientes')} />
-          <QuickAction icon="cut"      label="Serviços"     onPress={() => router.push('/(barbeiro)/servicos')} />
-          <QuickAction icon="cash"     label="Financeiro"   onPress={() => router.push('/(barbeiro)/financeiro')} />
-          <QuickAction icon="bar-chart" label="Analytics"   onPress={() => router.push('/(barbeiro)/analytics')} />
-          <QuickAction icon="document-text" label="Relatórios" onPress={() => router.push('/(barbeiro)/relatorios')} />
+          <QuickAction icon="calendar"      label="Agendamentos" onPress={() => router.push('/(barbeiro)/agendamentos')} />
+          <QuickAction icon="people"        label="Clientes"     onPress={() => router.push('/(barbeiro)/clientes')} />
+          <QuickAction icon="cut"           label="Serviços"     onPress={() => router.push('/(barbeiro)/servicos')} />
+          <QuickAction icon="cash"          label="Financeiro"   onPress={() => router.push('/(barbeiro)/financeiro')} />
+          <QuickAction icon="bar-chart"     label="Analytics"    onPress={() => router.push('/(barbeiro)/analytics')} />
+          <QuickAction icon="document-text" label="Relatórios"   onPress={() => router.push('/(barbeiro)/relatorios')} />
         </View>
       </View>
 
-      {/* Gráficos */}
+      {/* ── Taxa de Ocupação — OccupancyCard ─────────────────────────────── */}
+      {charts && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Taxa de Ocupação</Text>
+          <View style={styles.occupancyCard}>
+            {/* Anel de progresso simplificado */}
+            <View style={styles.occupancyLeft}>
+              <View style={styles.occupancyRing}>
+                <View style={[
+                  styles.occupancyFill,
+                  {
+                    // Borda colorida proporcional ao percentual
+                    borderColor: occupancyNum >= 75
+                      ? Colors.success
+                      : occupancyNum >= 50
+                        ? Colors.warning
+                        : Colors.error,
+                  },
+                ]} />
+                <View style={styles.occupancyCenter}>
+                  <Text style={[
+                    styles.occupancyPct,
+                    {
+                      color: occupancyNum >= 75
+                        ? Colors.success
+                        : occupancyNum >= 50
+                          ? Colors.warning
+                          : Colors.error,
+                    },
+                  ]}>
+                    {occupancyNum.toFixed(0)}%
+                  </Text>
+                </View>
+              </View>
+            </View>
+            <View style={styles.occupancyRight}>
+              <Text style={styles.occupancyTitle}>Slots ocupados este mês</Text>
+              <View style={styles.occupancyBar}>
+                <View
+                  style={[
+                    styles.occupancyBarFill,
+                    {
+                      width: `${Math.min(occupancyNum, 100)}%` as any,
+                      backgroundColor: occupancyNum >= 75
+                        ? Colors.success
+                        : occupancyNum >= 50
+                          ? Colors.warning
+                          : Colors.error,
+                    },
+                  ]}
+                />
+              </View>
+              <Text style={styles.occupancySub}>
+                {occupancyNum >= 75
+                  ? '🔥 Ótima ocupação!'
+                  : occupancyNum >= 50
+                    ? '📈 Crescendo bem'
+                    : '📣 Divulgue mais'}
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* ── Top Serviços — TopServicesCard ───────────────────────────────── */}
+      {topServices.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Top Serviços</Text>
+          <View style={styles.topServicesCard}>
+            {topServices.map((s, i) => (
+              <View key={i} style={[styles.topServiceRow, i > 0 && styles.topServiceBorder]}>
+                <View style={[styles.topServiceRank, { backgroundColor: i === 0 ? '#fef9c3' : i === 1 ? '#f1f5f9' : '#fef3c7' }]}>
+                  <Text style={[styles.topServiceRankText, { color: i === 0 ? '#ca8a04' : i === 1 ? '#64748b' : '#b45309' }]}>
+                    {i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉'}
+                  </Text>
+                </View>
+                <View style={styles.topServiceInfo}>
+                  <Text style={styles.topServiceName} numberOfLines={1}>{s.name}</Text>
+                  <View style={styles.topServiceBarTrack}>
+                    <View
+                      style={[
+                        styles.topServiceBarFill,
+                        {
+                          width: `${(s.count / maxCount) * 100}%` as any,
+                          backgroundColor: Colors.primary,
+                          opacity: 1 - i * 0.2,
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+                <View style={styles.topServiceValues}>
+                  <Text style={styles.topServiceCount}>{s.count}×</Text>
+                  <Text style={styles.topServiceRevenue}>
+                    R$ {Number(s.revenue).toFixed(0)}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* ── Gráfico de Receita ────────────────────────────────────────────── */}
       {charts && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Receita Mensal</Text>
@@ -195,6 +315,7 @@ export default function DashboardScreen() {
         </View>
       )}
 
+      {/* ── Gráfico de Agendamentos ───────────────────────────────────────── */}
       {charts && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Agendamentos (30 dias)</Text>
@@ -202,7 +323,7 @@ export default function DashboardScreen() {
         </View>
       )}
 
-      {/* Comparativo do mês */}
+      {/* ── Comparativo do Mês — ComparisonCard ──────────────────────────── */}
       {charts?.comparison && (
         <View style={styles.comparisonCard}>
           <Text style={styles.sectionTitle}>Comparativo do Mês</Text>
@@ -226,7 +347,7 @@ export default function DashboardScreen() {
         </View>
       )}
 
-      {/* Próximos Agendamentos */}
+      {/* ── Próximos Agendamentos ─────────────────────────────────────────── */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Próximos Agendamentos</Text>
         {validAppointments.length === 0 ? (
@@ -240,11 +361,12 @@ export default function DashboardScreen() {
           ))
         )}
       </View>
+
     </ScrollView>
   );
 }
 
-// ── Sub-componentes ───────────────────────────────────────────────────────────
+// ─── Sub-componentes ──────────────────────────────────────────────────────────
 
 function StatCard({ label, value, icon, color, bg, small }: any) {
   return (
@@ -270,7 +392,7 @@ function QuickAction({ icon, label, onPress }: any) {
 }
 
 function GrowthBadge({ value }: { value: string }) {
-  const num = parseFloat(value);
+  const num        = parseFloat(value);
   const isPositive = num >= 0;
   return (
     <View style={[styles.growthBadge, { backgroundColor: isPositive ? Colors.successBg : Colors.errorBg }]}>
@@ -301,20 +423,22 @@ function AppointmentItem({ appointment }: any) {
       </View>
       <View style={styles.appointmentTime}>
         <Text style={styles.appointmentDate}>
-          {format(new Date(appointment.date), "dd/MM", { locale: ptBR })}
+          {format(new Date(appointment.date), 'dd/MM', { locale: ptBR })}
         </Text>
         <Text style={styles.appointmentHour}>
-          {format(new Date(appointment.date), "HH:mm")}
+          {format(new Date(appointment.date), 'HH:mm')}
         </Text>
       </View>
     </View>
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: Spacing.md, paddingBottom: Spacing.xxl },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: Spacing.lg },
+  container:   { flex: 1, backgroundColor: Colors.background },
+  content:     { padding: Spacing.md, paddingBottom: Spacing.xxl },
+  centered:    { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: Spacing.lg },
   loadingText: { color: Colors.textSecondary, fontSize: 14, marginTop: 8 },
 
   alertBanner: {
@@ -325,7 +449,7 @@ const styles = StyleSheet.create({
   },
   alertText: { flex: 1, fontSize: 13, color: Colors.warning, fontWeight: '600' },
 
-  greeting: { marginBottom: Spacing.md },
+  greeting:     { marginBottom: Spacing.md },
   greetingText: { fontSize: 22, fontWeight: '700', color: Colors.textPrimary },
   greetingDate: { fontSize: 13, color: Colors.textSecondary, marginTop: 2, textTransform: 'capitalize' },
 
@@ -335,15 +459,15 @@ const styles = StyleSheet.create({
     padding: Spacing.md, ...Shadow.sm,
     borderWidth: 1, borderColor: Colors.border,
   },
-  statIcon: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
+  statIcon:  { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   statLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: '500', marginBottom: 4 },
   statValue: { fontSize: 24, fontWeight: '700', color: Colors.textPrimary },
 
-  section: { marginBottom: Spacing.md },
+  section:      { marginBottom: Spacing.md },
   sectionTitle: { fontSize: 17, fontWeight: '700', color: Colors.textPrimary, marginBottom: Spacing.sm },
 
-  quickActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  quickAction: { alignItems: 'center', gap: 6, width: '30%' },
+  quickActions:    { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  quickAction:     { alignItems: 'center', gap: 6, width: '30%' },
   quickActionIcon: {
     width: 52, height: 52, borderRadius: BorderRadius.lg,
     backgroundColor: '#faf5ff', alignItems: 'center', justifyContent: 'center',
@@ -351,20 +475,57 @@ const styles = StyleSheet.create({
   },
   quickActionLabel: { fontSize: 11, fontWeight: '600', color: Colors.textSecondary, textAlign: 'center' },
 
+  // Ocupação
+  occupancyCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 16,
+    backgroundColor: Colors.white, borderRadius: BorderRadius.xl,
+    padding: Spacing.md, ...Shadow.sm,
+    borderWidth: 1, borderColor: Colors.border,
+  },
+  occupancyLeft:    {},
+  occupancyRing:    { width: 72, height: 72, borderRadius: 36, borderWidth: 8, borderColor: Colors.gray[100], alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  occupancyFill:    { position: 'absolute', width: 72, height: 72, borderRadius: 36, borderWidth: 8 },
+  occupancyCenter:  { alignItems: 'center', justifyContent: 'center' },
+  occupancyPct:     { fontSize: 16, fontWeight: '800' },
+  occupancyRight:   { flex: 1 },
+  occupancyTitle:   { fontSize: 14, fontWeight: '600', color: Colors.textPrimary, marginBottom: 8 },
+  occupancyBar:     { height: 8, backgroundColor: Colors.gray[100], borderRadius: 4, overflow: 'hidden', marginBottom: 8 },
+  occupancyBarFill: { height: '100%', borderRadius: 4 },
+  occupancySub:     { fontSize: 12, color: Colors.textSecondary },
+
+  // Top Serviços
+  topServicesCard: {
+    backgroundColor: Colors.white, borderRadius: BorderRadius.xl,
+    padding: Spacing.md, ...Shadow.sm,
+    borderWidth: 1, borderColor: Colors.border,
+  },
+  topServiceRow:    { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
+  topServiceBorder: { borderTopWidth: 1, borderTopColor: Colors.border },
+  topServiceRank:   { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  topServiceRankText: { fontSize: 18 },
+  topServiceInfo:   { flex: 1, gap: 4 },
+  topServiceName:   { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
+  topServiceBarTrack: { height: 6, backgroundColor: Colors.gray[100], borderRadius: 3, overflow: 'hidden' },
+  topServiceBarFill:  { height: '100%', borderRadius: 3 },
+  topServiceValues:   { alignItems: 'flex-end', gap: 2 },
+  topServiceCount:    { fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
+  topServiceRevenue:  { fontSize: 11, color: Colors.success, fontWeight: '600' },
+
+  // Comparativo
   comparisonCard: {
     backgroundColor: Colors.white, borderRadius: BorderRadius.lg,
     padding: Spacing.md, ...Shadow.sm, marginBottom: Spacing.md,
     borderWidth: 1, borderColor: Colors.border,
   },
-  comparisonRow: { flexDirection: 'row', alignItems: 'center' },
-  comparisonItem: { flex: 1, alignItems: 'center', gap: 4 },
+  comparisonRow:     { flexDirection: 'row', alignItems: 'center' },
+  comparisonItem:    { flex: 1, alignItems: 'center', gap: 4 },
   comparisonDivider: { width: 1, height: 60, backgroundColor: Colors.border },
-  comparisonLabel: { fontSize: 12, color: Colors.textSecondary, fontWeight: '500' },
-  comparisonValue: { fontSize: 20, fontWeight: '700', color: Colors.textPrimary },
-  growthBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: BorderRadius.full },
-  growthText: { fontSize: 11, fontWeight: '700' },
+  comparisonLabel:   { fontSize: 12, color: Colors.textSecondary, fontWeight: '500' },
+  comparisonValue:   { fontSize: 20, fontWeight: '700', color: Colors.textPrimary },
+  growthBadge:       { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: BorderRadius.full },
+  growthText:        { fontSize: 11, fontWeight: '700' },
 
-  emptyBox: { alignItems: 'center', padding: Spacing.xl, gap: 8 },
+  emptyBox:  { alignItems: 'center', padding: Spacing.xl, gap: 8 },
   emptyText: { color: Colors.textSecondary, fontSize: 14 },
 
   appointmentCard: {
@@ -378,16 +539,16 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center',
   },
   appointmentAvatarText: { color: Colors.white, fontWeight: '700', fontSize: 18 },
-  appointmentInfo: { flex: 1 },
-  appointmentName: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
-  appointmentService: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
-  appointmentBarber: { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
-  appointmentTime: { alignItems: 'flex-end' },
-  appointmentDate: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
-  appointmentHour: { fontSize: 13, color: Colors.textSecondary },
+  appointmentInfo:       { flex: 1 },
+  appointmentName:       { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
+  appointmentService:    { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
+  appointmentBarber:     { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
+  appointmentTime:       { alignItems: 'flex-end' },
+  appointmentDate:       { fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
+  appointmentHour:       { fontSize: 13, color: Colors.textSecondary },
 
   expiredTitle: { fontSize: 22, fontWeight: '700', color: Colors.error },
-  expiredText: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
-  renewBtn: { backgroundColor: Colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: BorderRadius.lg, marginTop: 8 },
+  expiredText:  { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
+  renewBtn:     { backgroundColor: Colors.primary, paddingHorizontal: 24, paddingVertical: 12, borderRadius: BorderRadius.lg, marginTop: 8 },
   renewBtnText: { color: Colors.white, fontWeight: '700', fontSize: 16 },
 });

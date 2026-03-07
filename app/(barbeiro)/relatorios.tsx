@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, ActivityIndicator, Alert,
+  StyleSheet, ActivityIndicator, Alert, TextInput,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import api from '@/lib/api';
@@ -26,49 +26,88 @@ const REPORT_TYPES: { key: ReportType; label: string; icon: string; color: strin
   { key: 'customers',    label: 'Clientes',     icon: 'people',      color: '#3b82f6', sub: 'Análise de clientes' },
 ];
 
+// ─── Utilitários de data ──────────────────────────────────────────────────────
+
+/** Aplica máscara dd/mm/aaaa enquanto o usuário digita */
+function maskDate(raw: string): string {
+  const digits = raw.replace(/\D/g, '').slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+}
+
+/** Converte dd/mm/aaaa → aaaa-mm-dd para a API */
+function toApiDate(masked: string): string {
+  const parts = masked.split('/');
+  if (parts.length !== 3 || parts[2].length !== 4) return '';
+  return `${parts[2]}-${parts[1]}-${parts[0]}`;
+}
+
+/** Valida se dd/mm/aaaa é uma data real */
+function isValidDate(masked: string): boolean {
+  if (masked.length !== 10) return false;
+  const api = toApiDate(masked);
+  const d   = new Date(api);
+  return !isNaN(d.getTime());
+}
+
 export default function RelatoriosScreen() {
   const [reportType, setReportType] = useState<ReportType>('appointments');
   const [loading, setLoading]       = useState(false);
   const [reportData, setReportData] = useState<ReportData | null>(null);
 
+  // Datas com máscara dd/mm/aaaa
+  const [startMask, setStartMask] = useState('');
+  const [endMask,   setEndMask]   = useState('');
+
+  const [startError, setStartError] = useState('');
+  const [endError,   setEndError]   = useState('');
+
   const [filters, setFilters] = useState({
-    startDate: '',
-    endDate:   '',
-    barberId:  '',
-    status:    '',
+    barberId: '',
+    status:   '',
   });
 
-  const [barbers,  setBarbers]  = useState<any[]>([]);
-  const [services, setServices] = useState<any[]>([]);
+  const [barbers, setBarbers] = useState<any[]>([]);
 
   useEffect(() => { loadFiltersData(); }, []);
 
   async function loadFiltersData() {
     try {
-      const [bRes, sRes] = await Promise.all([
+      const [bRes] = await Promise.all([
         api.get('/users'),
-        api.get('/services'),
       ]);
-      setBarbers(bRes.data  || []);
-      setServices(sRes.data || []);
+      setBarbers(bRes.data || []);
     } catch (e) {
       console.error('Erro ao carregar filtros:', e);
     }
   }
 
+  // ── Gerar relatório ────────────────────────────────────────────────────────
   async function handleGenerateReport() {
+    // Validar datas preenchidas
+    if (startMask && !isValidDate(startMask)) {
+      setStartError('Data inválida. Use dd/mm/aaaa');
+      return;
+    }
+    if (endMask && !isValidDate(endMask)) {
+      setEndError('Data inválida. Use dd/mm/aaaa');
+      return;
+    }
+    setStartError('');
+    setEndError('');
+
     setLoading(true);
     setReportData(null);
     try {
       // ✅ Endpoint correto: /reports/{type} — espelha o web exatamente
-      const endpoint = `/reports/${reportType}`;
       const params: Record<string, string> = {};
-      if (filters.startDate) params.startDate = filters.startDate;
-      if (filters.endDate)   params.endDate   = filters.endDate;
-      if (filters.barberId)  params.barberId  = filters.barberId;
-      if (filters.status)    params.status    = filters.status;
+      if (startMask) params.startDate = toApiDate(startMask);
+      if (endMask)   params.endDate   = toApiDate(endMask);
+      if (filters.barberId) params.barberId = filters.barberId;
+      if (filters.status)   params.status   = filters.status;
 
-      const res = await api.get(endpoint, { params });
+      const res = await api.get(`/reports/${reportType}`, { params });
       setReportData(res.data);
     } catch (e: any) {
       Alert.alert('Erro', e.response?.data?.error || 'Erro ao gerar relatório');
@@ -79,14 +118,14 @@ export default function RelatoriosScreen() {
 
   function formatSummaryKey(key: string) {
     const map: Record<string, string> = {
-      totalAppointments: 'Total de Agendamentos',
+      totalAppointments:     'Total de Agendamentos',
       completedAppointments: 'Concluídos',
       cancelledAppointments: 'Cancelados',
-      totalRevenue: 'Receita Total',
-      averageRevenue: 'Receita Média',
-      totalCustomers: 'Total de Clientes',
-      newCustomers: 'Novos Clientes',
-      returningCustomers: 'Clientes Recorrentes',
+      totalRevenue:          'Receita Total',
+      averageRevenue:        'Receita Média',
+      totalCustomers:        'Total de Clientes',
+      newCustomers:          'Novos Clientes',
+      returningCustomers:    'Clientes Recorrentes',
     };
     return map[key] || key.replace(/([A-Z])/g, ' $1').trim();
   }
@@ -102,7 +141,7 @@ export default function RelatoriosScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}>
+      showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
       {/* Header */}
       <View style={styles.header}>
@@ -135,21 +174,55 @@ export default function RelatoriosScreen() {
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Filtros</Text>
 
+        {/* ── Datas com máscara ────────────────────────────────────────────── */}
         <View style={styles.row}>
           <View style={[styles.field, { flex: 1 }]}>
             <Text style={styles.label}>Data Início</Text>
-            <View style={styles.dateInput}>
+            <View style={[styles.dateInputBox, !!startError && { borderColor: Colors.error }]}>
               <Ionicons name="calendar-outline" size={16} color={Colors.gray[400]} />
-              <Text style={styles.dateText}>{filters.startDate || 'dd/mm/aaaa'}</Text>
+              <TextInput
+                style={styles.dateInput}
+                value={startMask}
+                onChangeText={v => {
+                  setStartMask(maskDate(v));
+                  setStartError('');
+                }}
+                placeholder="dd/mm/aaaa"
+                placeholderTextColor={Colors.gray[400]}
+                keyboardType="numeric"
+                maxLength={10}
+              />
             </View>
+            {!!startError && <Text style={styles.errorText}>{startError}</Text>}
           </View>
+
           <View style={[styles.field, { flex: 1, marginLeft: 12 }]}>
             <Text style={styles.label}>Data Fim</Text>
-            <View style={styles.dateInput}>
+            <View style={[styles.dateInputBox, !!endError && { borderColor: Colors.error }]}>
               <Ionicons name="calendar-outline" size={16} color={Colors.gray[400]} />
-              <Text style={styles.dateText}>{filters.endDate || 'dd/mm/aaaa'}</Text>
+              <TextInput
+                style={styles.dateInput}
+                value={endMask}
+                onChangeText={v => {
+                  setEndMask(maskDate(v));
+                  setEndError('');
+                }}
+                placeholder="dd/mm/aaaa"
+                placeholderTextColor={Colors.gray[400]}
+                keyboardType="numeric"
+                maxLength={10}
+              />
             </View>
+            {!!endError && <Text style={styles.errorText}>{endError}</Text>}
           </View>
+        </View>
+
+        {/* Dica de data */}
+        <View style={styles.dateTip}>
+          <Ionicons name="information-circle-outline" size={14} color={Colors.textMuted} />
+          <Text style={styles.dateTipText}>
+            Digite as datas no formato dia/mês/ano (ex: 01/01/2025). Deixe em branco para todos os períodos.
+          </Text>
         </View>
 
         {/* Filtro Barbeiro (agendamentos + receita) */}
@@ -180,12 +253,18 @@ export default function RelatoriosScreen() {
           <View style={styles.field}>
             <Text style={styles.label}>Status</Text>
             <View style={styles.filterRow}>
-              {['', 'scheduled', 'confirmed', 'completed', 'cancelled'].map(s => (
-                <TouchableOpacity key={s}
-                  style={[styles.filterChip, filters.status === s && styles.filterChipActive]}
-                  onPress={() => setFilters(p => ({ ...p, status: s }))}>
-                  <Text style={[styles.filterChipText, filters.status === s && styles.filterChipTextActive]}>
-                    {s === '' ? 'Todos' : s === 'scheduled' ? 'Agendado' : s === 'confirmed' ? 'Confirmado' : s === 'completed' ? 'Concluído' : 'Cancelado'}
+              {[
+                { key: '',          label: 'Todos' },
+                { key: 'scheduled', label: 'Agendado' },
+                { key: 'confirmed', label: 'Confirmado' },
+                { key: 'completed', label: 'Concluído' },
+                { key: 'cancelled', label: 'Cancelado' },
+              ].map(s => (
+                <TouchableOpacity key={s.key}
+                  style={[styles.filterChip, filters.status === s.key && styles.filterChipActive]}
+                  onPress={() => setFilters(p => ({ ...p, status: s.key }))}>
+                  <Text style={[styles.filterChipText, filters.status === s.key && styles.filterChipTextActive]}>
+                    {s.label}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -263,6 +342,7 @@ export default function RelatoriosScreen() {
           <Text style={styles.emptyText}>Selecione os filtros e clique em Gerar Relatório</Text>
         </View>
       )}
+
     </ScrollView>
   );
 }
@@ -284,8 +364,22 @@ const styles = StyleSheet.create({
   field:        { marginBottom: Spacing.sm },
   label:        { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, marginBottom: 6 },
   row:          { flexDirection: 'row' },
-  dateInput:    { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: Colors.gray[50], borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.md, paddingHorizontal: 12, paddingVertical: 12 },
-  dateText:     { fontSize: 14, color: Colors.textMuted },
+
+  // Date input com máscara
+  dateInputBox: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: Colors.gray[50], borderWidth: 1, borderColor: Colors.border,
+    borderRadius: BorderRadius.md, paddingHorizontal: 12, paddingVertical: 10,
+  },
+  dateInput:    { flex: 1, fontSize: 15, color: Colors.textPrimary },
+  errorText:    { fontSize: 11, color: Colors.error, marginTop: 4 },
+  dateTip: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 6,
+    backgroundColor: Colors.gray[50], borderRadius: BorderRadius.sm,
+    padding: 8, marginBottom: Spacing.sm,
+  },
+  dateTipText: { flex: 1, fontSize: 11, color: Colors.textMuted, lineHeight: 16 },
+
   filterRow:    { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   filterChip:   { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: Colors.gray[100], borderWidth: 1, borderColor: Colors.border },
   filterChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
