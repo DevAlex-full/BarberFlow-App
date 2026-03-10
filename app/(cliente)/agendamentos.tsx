@@ -140,7 +140,7 @@ export default function AgendamentosScreen() {
             style={[styles.filterChip, filter === f.key && styles.filterChipActive]}
             onPress={() => setFilter(f.key)}
           >
-            <Text style={[styles.filterText, filter === f.key && styles.filterTextActive]}>
+            <Text style={[styles.filterText, filter === f.key && styles.filterTextActive]} numberOfLines={1}>
               {f.label} ({f.count})
             </Text>
           </TouchableOpacity>
@@ -367,16 +367,16 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 22, fontWeight: '700', color: '#ffffff' },
 
   filtersScroll:   { backgroundColor: '#151b23', borderBottomWidth: 1, borderBottomColor: '#1f2937' },
-  filtersContent:  { paddingHorizontal: 16, paddingVertical: 10, gap: 8, flexDirection: 'row' },
+  filtersContent:  { paddingHorizontal: 16, paddingVertical: 10, gap: 8, flexDirection: 'row', alignItems: 'center' },
   filterChip: {
-    flexShrink: 0, alignItems: 'center', justifyContent: 'center',
     paddingHorizontal: 14, paddingVertical: 7,
     backgroundColor: '#1f2937', borderRadius: 20,
     borderWidth: 1, borderColor: '#1f2937',
+    alignItems: 'center', justifyContent: 'center',
   },
   filterChipActive: { backgroundColor: '#2563eb', borderColor: '#2563eb' },
-  filterText:       { fontSize: 13, fontWeight: '600', color: '#9ca3af', textAlign: 'center' },
-  filterTextActive: { color: '#151b23' },
+  filterText:       { fontSize: 13, fontWeight: '600', color: '#9ca3af' },
+  filterTextActive: { color: '#ffffff' },
 
   listContent:  { padding: 16, gap: 12 },
   sectionHeader: {

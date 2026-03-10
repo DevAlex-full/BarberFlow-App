@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
+const DEFAULT_LOGO = require('../../assets/images/logo4.png');
 import { Ionicons } from '@expo/vector-icons';
 import { Badge } from '@/components/ui/Badge';
 
@@ -49,24 +50,16 @@ function formatDistance(meters: number): string {
 function Avatar({ logo, name, size }: { logo?: string | null; name: string; size: 'sm' | 'lg' }) {
   const dim  = size === 'lg' ? 52 : 56;
   const rad  = size === 'lg' ? 12 : dim / 2;
-  const fs   = size === 'lg' ? 22 : 22;
 
-  if (logo) {
-    return (
-      <Image
-        source={{ uri: logo }}
-        style={{ width: dim, height: dim, borderRadius: rad, backgroundColor: '#1f2937' }}
-        resizeMode="cover"
-      />
-    );
-  }
+  // Sempre exibe logo: a da barbearia se existir, senão a logo padrão do BarberFlow
+  const source = logo ? { uri: logo } : DEFAULT_LOGO;
 
   return (
-    <View style={{ width: dim, height: dim, borderRadius: rad, backgroundColor: '#2563eb', alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ fontSize: fs, fontWeight: '700', color: '#ffffff' }}>
-        {name.charAt(0).toUpperCase()}
-      </Text>
-    </View>
+    <Image
+      source={source}
+      style={{ width: dim, height: dim, borderRadius: rad, backgroundColor: '#1f2937' }}
+      resizeMode="contain"
+    />
   );
 }
 
@@ -102,7 +95,7 @@ export function BarbershopCard({ barbershop: b, variant = 'vertical', onPress, o
         <View style={styles.vInfo}>
           <View style={styles.vNameRow}>
             <Text style={styles.vName} numberOfLines={1}>{b.name}</Text>
-            <Badge label={PLAN_LABELS[b.plan] || b.plan} variant={PLAN_VARIANTS[b.plan] || 'gray'} />
+            {/* Badge de plano removido conforme design web */}
           </View>
           {!!b.description && <Text style={styles.vDesc} numberOfLines={2}>{b.description}</Text>}
           {(!!b.address || !!b.city) && (
@@ -122,15 +115,20 @@ export function BarbershopCard({ barbershop: b, variant = 'vertical', onPress, o
             </View>
           )}
         </View>
-        {!!onFavoriteToggle && (
-          <TouchableOpacity onPress={onFavoriteToggle} style={styles.favBtn}>
-            <Ionicons
-              name={isFavorited ? 'heart' : 'heart-outline'}
-              size={22}
-              color={isFavorited ? '#f87171' : '#9ca3af'}
-            />
-          </TouchableOpacity>
-        )}
+        <View style={styles.vActions}>
+          {!!onFavoriteToggle && (
+            <TouchableOpacity onPress={onFavoriteToggle} style={styles.favBtn}>
+              <Ionicons
+                name={isFavorited ? 'heart' : 'heart-outline'}
+                size={20}
+                color={isFavorited ? '#f87171' : '#9ca3af'}
+              />
+            </TouchableOpacity>
+          )}
+          <View style={styles.arrowBtn}>
+            <Ionicons name="chevron-forward" size={16} color="#ffffff" />
+          </View>
+        </View>
       </View>
       {!!b.rating && (
         <View style={styles.vBottom}>
@@ -167,11 +165,13 @@ const styles = StyleSheet.create({
   vTop:         { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   vInfo:        { flex: 1 },
   vNameRow:     { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  vName:        { fontSize: 16, fontWeight: '700', color: '#ffffff' },
+  vName:        { fontSize: 16, fontWeight: '700', color: '#2563eb' },
   vDesc:        { fontSize: 13, color: '#9ca3af', marginTop: 4, lineHeight: 18 },
   vLocation:    { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
   vLocationText:{ fontSize: 12, color: '#9ca3af', flex: 1 },
   favBtn:       { padding: 4 },
+  vActions:     { flexDirection: 'column', alignItems: 'center', gap: 8 },
+  arrowBtn:     { width: 28, height: 28, borderRadius: 14, backgroundColor: '#2563eb', alignItems: 'center', justifyContent: 'center' },
   vBottom:      { flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#1f2937', paddingTop: 8 },
   vRatingText:  { fontSize: 13, fontWeight: '700', color: '#ffffff' },
   vReviews:     { fontSize: 12, color: '#9ca3af' },

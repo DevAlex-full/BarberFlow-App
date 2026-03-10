@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { Linking } from 'react-native';
 import * as Location from 'expo-location';
 import clientApi from '@/lib/client-api';
 import { useAuthStore } from '@/stores/authStore';
@@ -37,6 +38,9 @@ export default function ClienteHomeScreen() {
   const [search,     setSearch]     = useState('');
   const [locDenied,  setLocDenied]  = useState(false);
   const [locLoading, setLocLoading] = useState(false);
+  const [radius,     setRadius]     = useState(10);
+  const [showRadiusPicker, setShowRadiusPicker] = useState(false);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lon: number } | null>(null);
 
   // Data formatada: "segunda-feira, 9 de mar. de 2026"
   const today = new Date().toLocaleDateString('pt-BR', {
@@ -44,11 +48,11 @@ export default function ClienteHomeScreen() {
   });
 
   // ── Buscar barbearias próximas via servidor ───────────────────────────────
-  const loadNearby = useCallback(async (lat: number, lon: number) => {
+  const loadNearby = useCallback(async (lat: number, lon: number, r: number = 10) => {
     try {
       // Usa o endpoint já existente no backend que calcula distância server-side
       const res = await clientApi.get('/barbershop-location/nearby', {
-        params: { lat, lng: lon, radius: 10 },
+        params: { lat, lng: lon, radius: r },
       });
       const data = res.data?.barbershops || [];
       // distance vem em km do servidor
@@ -84,6 +88,7 @@ export default function ClienteHomeScreen() {
         accuracy: Location.Accuracy.Balanced,
       });
       setLocDenied(false);
+      setUserCoords({ lat: loc.coords.latitude, lon: loc.coords.longitude });
       await loadNearby(loc.coords.latitude, loc.coords.longitude);
     } catch {
       setLocDenied(true);
@@ -103,6 +108,7 @@ export default function ClienteHomeScreen() {
         const loc = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
         });
+        setUserCoords({ lat: loc.coords.latitude, lon: loc.coords.longitude });
         await loadNearby(loc.coords.latitude, loc.coords.longitude);
         setLocDenied(false);
       } else {
@@ -124,6 +130,37 @@ export default function ClienteHomeScreen() {
   }
 
   // ── Listas calculadas ─────────────────────────────────────────────────────
+  function openMap() {
+    // Se há barbearias próximas, abre o mapa com todas elas como pins
+    if (nearbyBarbershops.length > 0) {
+      const first = nearbyBarbershops[0];
+      if (first.latitude && first.longitude) {
+        // Abre Google Maps centrado nas coordenadas da barbearia mais próxima
+        const label = encodeURIComponent(first.name);
+        Linking.openURL(
+          `https://maps.google.com/maps?q=${first.latitude},${first.longitude}(${label})&z=16`
+        );
+        return;
+      }
+      // Fallback: busca por nome+endereço
+      const query = encodeURIComponent(`${first.name} ${first.address || ''} ${first.city || ''}`);
+      Linking.openURL(`https://maps.google.com/maps?q=${query}`);
+      return;
+    }
+    // Sem barbearias — abre mapa com localização do usuário
+    if (userCoords) {
+      Linking.openURL(`https://maps.google.com/maps?q=barbearia&near=${userCoords.lat},${userCoords.lon}`);
+    } else {
+      Linking.openURL('https://maps.google.com/maps?q=barbearia');
+    }
+  }
+
+  async function handleRadiusChange(r: number) {
+    setRadius(r);
+    setShowRadiusPicker(false);
+    if (userCoords) await loadNearby(userCoords.lat, userCoords.lon, r);
+  }
+
   const featured = allBarbershops
     .filter(b => b.plan === 'premium' || b.plan === 'enterprise')
     .slice(0, 8);
@@ -213,20 +250,7 @@ export default function ClienteHomeScreen() {
         </View>
       )}
 
-      {/* ── Destaques ─────────────────────────────────────────────────────── */}
-      {!search && featured.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>⭐ Destaques</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hList}>
-            {featured.map(b => (
-              <BarbershopCard
-                key={b.id} barbershop={b} variant="horizontal"
-                onPress={() => router.push(`/(cliente)/barbearia/${b.id}`)}
-              />
-            ))}
-          </ScrollView>
-        </View>
-      )}
+      {/* Destaques removido — não existe no web */}
 
       {/* ── Empresas próximas ─────────────────────────────────────────────── */}
       {!search && (
@@ -238,6 +262,31 @@ export default function ClienteHomeScreen() {
                 {nearbyBarbershops.length} barbearia{nearbyBarbershops.length !== 1 ? 's' : ''}
               </Text>
             )}
+          </View>
+
+          {/* Raio + Mapa */}
+          <View style={styles.radiusRow}>
+            <TouchableOpacity style={styles.radiusBtn} onPress={() => setShowRadiusPicker(p => !p)}>
+              <Text style={styles.radiusBtnText}>Raio: {radius} km</Text>
+              <Ionicons name="chevron-down" size={14} color="#9ca3af" />
+            </TouchableOpacity>
+            {showRadiusPicker && (
+              <View style={styles.radiusPicker}>
+                {[5, 10, 20, 50].map(r => (
+                  <TouchableOpacity
+                    key={r}
+                    style={[styles.radiusOption, radius === r && styles.radiusOptionActive]}
+                    onPress={() => handleRadiusChange(r)}
+                  >
+                    <Text style={[styles.radiusOptionText, radius === r && { color: '#ffffff' }]}>{r} km</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+            <TouchableOpacity style={styles.mapBtn} onPress={openMap}>
+              <Ionicons name="map" size={16} color="#ffffff" />
+              <Text style={styles.mapBtnText}>Mapa</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Card de habilitar localização */}
@@ -349,4 +398,15 @@ const styles = StyleSheet.create({
   empty:      { alignItems: 'center', paddingVertical: 48, gap: 10 },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: '#ffffff' },
   emptyText:  { fontSize: 14, color: '#9ca3af', textAlign: 'center' },
+
+  // Raio + Mapa
+  radiusRow:          { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16, position: 'relative', zIndex: 10 },
+  radiusBtn:          { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#1f2937', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 9, borderWidth: 1, borderColor: '#374151' },
+  radiusBtnText:      { fontSize: 14, fontWeight: '600', color: '#9ca3af' },
+  radiusPicker:       { position: 'absolute', top: 44, left: 0, backgroundColor: '#1f2937', borderRadius: 12, borderWidth: 1, borderColor: '#374151', zIndex: 99 },
+  radiusOption:       { paddingHorizontal: 24, paddingVertical: 12 },
+  radiusOptionActive: { backgroundColor: '#2563eb' },
+  radiusOptionText:   { fontSize: 14, fontWeight: '600', color: '#9ca3af' },
+  mapBtn:             { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#2563eb', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 9 },
+  mapBtnText:         { fontSize: 14, fontWeight: '700', color: '#ffffff' },
 });

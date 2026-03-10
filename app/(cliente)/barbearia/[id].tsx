@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+const DEFAULT_LOGO = require('../../../assets/images/logo4.png');
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
   ActivityIndicator, Alert, Linking, Modal, FlatList, Image,
@@ -18,6 +19,12 @@ interface BarbershopConfig {
   whatsappNumber?: string;
   allowOnlineBooking?: boolean;
   showTeam?: boolean;
+  primaryColor?: string;
+  secondaryColor?: string;
+  heroImage?: string;
+  heroTitle?: string;
+  heroSubtitle?: string;
+  description?: string;
 }
 
 interface Service {
@@ -130,10 +137,14 @@ export default function BarbeariaDetailScreen() {
     if (!selDate || !selService || !selBarber) return;
     setLoadingTimes(true);
     setTimes([]);
+    // Resolver barberId: se __any__, usa o primeiro barbeiro ativo
+    const resolvedBarberId = selBarber === '__any__'
+      ? (barbers[0]?.id ?? undefined)
+      : selBarber;
     try {
       const res = await clientApi.get(
         `/public/barbershops/${id}/available-times`,
-        { params: { date: selDate, serviceId: selService.id, barberId: selBarber } }
+        { params: { date: selDate, serviceId: selService.id, ...(resolvedBarberId ? { barberId: resolvedBarberId } : {}) } }
       );
       setTimes(Array.isArray(res.data) ? res.data : []);
     } catch {
@@ -199,9 +210,18 @@ export default function BarbeariaDetailScreen() {
     setBooking(true);
     setBookError('');
     try {
+      // Quando "Sem preferência", usa o primeiro barbeiro disponível
+      const resolvedBarberId = selBarber === '__any__'
+        ? (barbers[0]?.id ?? '')
+        : selBarber;
+      if (!resolvedBarberId) {
+        setBookError('Nenhum profissional disponível no momento.');
+        setBooking(false);
+        return;
+      }
       await clientApi.post('/client/appointments', {
         barbershopId: id,
-        barberId:     selBarber,
+        barberId:     resolvedBarberId,
         serviceId:    selService.id,
         date:         selTime,
       });
@@ -271,17 +291,11 @@ export default function BarbeariaDetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Hero */}
         <View style={styles.hero}>
-          {shop.logo ? (
-            <Image
-              source={{ uri: shop.logo }}
-              style={styles.heroLogoImg}
-              resizeMode="cover"
-            />
-          ) : (
-            <View style={styles.heroAvatar}>
-              <Text style={styles.heroAvatarText}>{shop.name.charAt(0).toUpperCase()}</Text>
-            </View>
-          )}
+          <Image
+            source={shop.logo ? { uri: shop.logo } : DEFAULT_LOGO}
+            style={styles.heroLogoImg}
+            resizeMode="contain"
+          />
           <Text style={styles.heroName}>{shop.name}</Text>
           {!!shop.description && (
             <Text style={styles.heroDesc}>{shop.description}</Text>
@@ -354,7 +368,7 @@ export default function BarbeariaDetailScreen() {
                   </Text>
                   {cfg.allowOnlineBooking !== false && (
                     <TouchableOpacity
-                      style={styles.agendarBtn}
+                      style={[styles.agendarBtn, { backgroundColor: cfg.primaryColor || '#2563eb' }]}
                       onPress={() => openBooking(s)}
                     >
                       <Text style={styles.agendarBtnText}>Agendar</Text>
@@ -498,11 +512,27 @@ export default function BarbeariaDetailScreen() {
                   </View>
                 )}
 
-                <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+                <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }}>
                   {/* STEP 1 — Barbeiro */}
                   {bookStep === 1 && (
                     <View style={styles.stepContent}>
                       <Text style={styles.stepTitle}>Escolha o Profissional</Text>
+                      {/* Opção "Sem preferência" sempre disponível */}
+                      <TouchableOpacity
+                        style={[styles.barberOption, selBarber === '__any__' && styles.barberOptionActive]}
+                        onPress={() => setSelBarber('__any__')}
+                      >
+                        <View style={[styles.barberOptionAvatar, { backgroundColor: '#374151' }]}>
+                          <Ionicons name="people-outline" size={22} color="#9ca3af" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.barberOptionName}>Sem preferência</Text>
+                          <Text style={styles.barberOptionRole}>Qualquer profissional disponível</Text>
+                        </View>
+                        {selBarber === '__any__' && (
+                          <Ionicons name="checkmark-circle" size={22} color={'#2563eb'} />
+                        )}
+                      </TouchableOpacity>
                       {barbers.map(b => (
                         <TouchableOpacity
                           key={b.id}
@@ -618,7 +648,9 @@ export default function BarbeariaDetailScreen() {
                           <View style={styles.summaryRow}>
                             <Text style={styles.summaryLabel}>Profissional</Text>
                             <Text style={styles.summaryValue}>
-                              {barbers.find(b => b.id === selBarber)?.name}
+                              {selBarber === '__any__'
+                                ? (barbers[0]?.name ?? 'Sem preferência')
+                                : barbers.find(b => b.id === selBarber)?.name}
                             </Text>
                           </View>
                           <View style={styles.summaryRow}>
@@ -692,16 +724,15 @@ const styles = StyleSheet.create({
     padding: 20, gap: 6,
     borderBottomWidth: 1, borderBottomColor: '#1f2937',
   },
+  heroLogoImg: {
+    width: 80, height: 80, borderRadius: 40, marginBottom: 4,
+    backgroundColor: '#1f2937',
+  },
   heroAvatar: {
     width: 80, height: 80, borderRadius: 40,
     backgroundColor: '#2563eb', alignItems: 'center', justifyContent: 'center', marginBottom: 4,
   },
   heroAvatarText: { fontSize: 32, fontWeight: '700', color: '#151b23' },
-  heroLogoImg: {
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: '#1f2937', marginBottom: 4,
-    borderWidth: 1, borderColor: '#374151',
-  },
   heroName:       { fontSize: 22, fontWeight: '700', color: '#ffffff' },
   heroDesc:       { fontSize: 14, color: '#9ca3af', textAlign: 'center', lineHeight: 20 },
   locationRow:    { flexDirection: 'row', alignItems: 'center', gap: 4 },
@@ -740,7 +771,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#2563eb', paddingHorizontal: 14, paddingVertical: 6,
     borderRadius: 10,
   },
-  agendarBtnText: { color: '#151b23', fontWeight: '700', fontSize: 13 },
+  agendarBtnText: { color: '#ffffff', fontWeight: '700', fontSize: 13 },
 
   barberCard: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
@@ -782,7 +813,8 @@ const styles = StyleSheet.create({
   },
   modalBox: {
     backgroundColor: '#151b23', borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    maxHeight: '92%', paddingBottom: 32,
+    height: '88%', paddingBottom: 32,
+    flex: 1,
   },
   modalHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
