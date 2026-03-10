@@ -2,7 +2,6 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Colors, BorderRadius, Shadow, Spacing } from '@/constants/colors';
 import { Badge } from '@/components/ui/Badge';
 
 type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
@@ -40,7 +39,7 @@ export function AppointmentCard({ appointment: a, onCancel, onPress }: ClientApp
       {/* Topo: barbearia + badge */}
       <View style={styles.top}>
         <View style={styles.shopIcon}>
-          <Ionicons name="cut" size={20} color={Colors.primary} />
+          <Ionicons name="cut" size={20} color={'#2563eb'} />
         </View>
         <View style={styles.topInfo}>
           <Text style={styles.shopName}>{a.barbershop.name}</Text>
@@ -52,17 +51,17 @@ export function AppointmentCard({ appointment: a, onCancel, onPress }: ClientApp
       {/* Meio: data/hora/barbeiro/duração */}
       <View style={styles.meta}>
         <View style={styles.metaItem}>
-          <Ionicons name="calendar-outline" size={14} color={Colors.textSecondary} />
+          <Ionicons name="calendar-outline" size={14} color={'#9ca3af'} />
           <Text style={styles.metaText}>
             {format(date, "dd 'de' MMM", { locale: ptBR })}
           </Text>
         </View>
         <View style={styles.metaItem}>
-          <Ionicons name="time-outline" size={14} color={Colors.textSecondary} />
+          <Ionicons name="time-outline" size={14} color={'#9ca3af'} />
           <Text style={styles.metaText}>{format(date, 'HH:mm')}</Text>
         </View>
         <View style={styles.metaItem}>
-          <Ionicons name="person-outline" size={14} color={Colors.textSecondary} />
+          <Ionicons name="person-outline" size={14} color={'#9ca3af'} />
           <Text style={styles.metaText}>{a.barber.name}</Text>
         </View>
       </View>
@@ -85,29 +84,29 @@ export function AppointmentCard({ appointment: a, onCancel, onPress }: ClientApp
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.white, borderRadius: BorderRadius.xl,
-    padding: Spacing.md, ...Shadow.sm,
-    borderWidth: 1, borderColor: Colors.border, gap: 12,
+    backgroundColor: '#151b23', borderRadius: 16,
+    padding: 16, 
+    borderWidth: 1, borderColor: '#1f2937', gap: 12,
   },
   top:     { flexDirection: 'row', alignItems: 'center', gap: 10 },
   shopIcon: {
-    width: 40, height: 40, borderRadius: BorderRadius.md,
-    backgroundColor: '#faf5ff', alignItems: 'center', justifyContent: 'center',
+    width: 40, height: 40, borderRadius: 10,
+    backgroundColor: 'rgba(37,99,235,0.15)', alignItems: 'center', justifyContent: 'center',
   },
   topInfo:     { flex: 1 },
-  shopName:    { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
-  serviceName: { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
+  shopName:    { fontSize: 15, fontWeight: '700', color: '#ffffff' },
+  serviceName: { fontSize: 13, color: '#9ca3af', marginTop: 2 },
   meta: {
     flexDirection: 'row', flexWrap: 'wrap', gap: 12,
-    paddingTop: 10, borderTopWidth: 1, borderTopColor: Colors.border,
+    paddingTop: 10, borderTopWidth: 1, borderTopColor: '#1f2937',
   },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { fontSize: 12, color: Colors.textSecondary },
+  metaText: { fontSize: 12, color: '#9ca3af' },
   footer: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingTop: 10, borderTopWidth: 1, borderTopColor: Colors.border,
+    paddingTop: 10, borderTopWidth: 1, borderTopColor: '#1f2937',
   },
-  price:      { fontSize: 16, fontWeight: '700', color: Colors.primary },
-  cancelBtn:  { backgroundColor: Colors.errorBg, paddingHorizontal: 14, paddingVertical: 6, borderRadius: BorderRadius.md },
-  cancelText: { fontSize: 13, fontWeight: '600', color: Colors.error },
+  price:      { fontSize: 16, fontWeight: '700', color: '#2563eb' },
+  cancelBtn:  { backgroundColor: 'rgba(239,68,68,0.1)', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 10 },
+  cancelText: { fontSize: 13, fontWeight: '600', color: '#f87171' },
 });

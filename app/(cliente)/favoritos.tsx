@@ -1,16 +1,29 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet,
-  ActivityIndicator, RefreshControl, Alert,
+  ActivityIndicator, RefreshControl, Alert, TouchableOpacity,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import clientApi from '@/lib/client-api';
-import { Colors, Spacing } from '@/constants/colors';
 import { BarbershopCard } from '@/components/cliente/BarbershopCard';
 
+interface FavoriteBarbershop {
+  id: string;
+  name: string;
+  description?: string;
+  city?: string | null;
+  state?: string | null;
+  address?: string | null;
+  phone?: string;
+  logo?: string | null;
+  rating?: number;
+  totalReviews?: number;
+  plan: string;
+}
+
 export default function FavoritosScreen() {
-  const [favorites,  setFavorites]  = useState<any[]>([]);
+  const [favorites,  setFavorites]  = useState<FavoriteBarbershop[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -34,27 +47,31 @@ export default function FavoritosScreen() {
   }
 
   async function handleRemove(barbershopId: string) {
-    Alert.alert('Remover', 'Remover dos favoritos?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Remover',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await clientApi.delete(`/client/favorites/${barbershopId}`);
-            setFavorites(prev => prev.filter(f => f.id !== barbershopId));
-          } catch {
-            Alert.alert('Erro', 'Não foi possível remover.');
-          }
+    Alert.alert(
+      'Remover Favorito',
+      'Remover esta barbearia dos seus favoritos?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Remover',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await clientApi.delete(`/client/favorites/${barbershopId}`);
+              setFavorites(prev => prev.filter(f => f.id !== barbershopId));
+            } catch {
+              Alert.alert('Erro', 'Não foi possível remover.');
+            }
+          },
         },
-      },
-    ]);
+      ]
+    );
   }
 
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={'#2563eb'} />
       </View>
     );
   }
@@ -63,24 +80,33 @@ export default function FavoritosScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Favoritos</Text>
-        <Text style={styles.headerSub}>
-          {favorites.length} barbearia{favorites.length !== 1 ? 's' : ''} salva{favorites.length !== 1 ? 's' : ''}
-        </Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>Favoritos</Text>
+          <Text style={styles.headerSub}>
+            {favorites.length} barbearia{favorites.length !== 1 ? 's' : ''} salva{favorites.length !== 1 ? 's' : ''}
+          </Text>
+        </View>
+        <Ionicons name="heart" size={24} color={'#f87171'} />
       </View>
 
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={'#2563eb'} />}
         showsVerticalScrollIndicator={false}
       >
         {favorites.length === 0 ? (
           <View style={styles.empty}>
-            <Ionicons name="heart-outline" size={64} color={Colors.gray[300]} />
+            <Ionicons name="heart-outline" size={64} color={'#6b7280'} />
             <Text style={styles.emptyTitle}>Nenhum favorito ainda</Text>
             <Text style={styles.emptyText}>
-              Explore barbearias e toque no coração para salvar seus favoritos!
+              Salve suas barbearias favoritas para acessá-las rapidamente
             </Text>
+            <TouchableOpacity
+              style={styles.exploreBtn}
+              onPress={() => router.push('/(cliente)')}
+            >
+              <Text style={styles.exploreBtnText}>Explorar Barbearias</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           favorites.map(b => (
@@ -94,23 +120,35 @@ export default function FavoritosScreen() {
             />
           ))
         )}
+
+        <View style={{ height: 32 }} />
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  container: { flex: 1, backgroundColor: '#000000' },
   centered:  { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
   header: {
-    backgroundColor: Colors.white, paddingHorizontal: Spacing.md,
-    paddingTop: 56, paddingBottom: Spacing.md,
-    borderBottomWidth: 1, borderBottomColor: Colors.border,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#151b23', paddingHorizontal: 16,
+    paddingTop: 56, paddingBottom: 16,
+    borderBottomWidth: 1, borderBottomColor: '#1f2937',
   },
-  headerTitle: { fontSize: 22, fontWeight: '700', color: Colors.textPrimary },
-  headerSub:   { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
-  content:     { padding: Spacing.md, gap: 12, paddingBottom: 40 },
-  empty:       { alignItems: 'center', paddingTop: 80, gap: 12, paddingHorizontal: 32 },
-  emptyTitle:  { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
-  emptyText:   { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20 },
+  headerLeft:  { flex: 1 },
+  headerTitle: { fontSize: 22, fontWeight: '700', color: '#ffffff' },
+  headerSub:   { fontSize: 13, color: '#9ca3af', marginTop: 2 },
+
+  content: { padding: 16, gap: 12, paddingBottom: 40 },
+
+  empty: { alignItems: 'center', paddingTop: 80, gap: 12, paddingHorizontal: 32 },
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: '#ffffff' },
+  emptyText:  { fontSize: 14, color: '#9ca3af', textAlign: 'center', lineHeight: 20 },
+  exploreBtn: {
+    marginTop: 8, backgroundColor: '#2563eb',
+    paddingHorizontal: 24, paddingVertical: 12, borderRadius: 20,
+  },
+  exploreBtnText: { color: '#151b23', fontWeight: '700', fontSize: 15 },
 });

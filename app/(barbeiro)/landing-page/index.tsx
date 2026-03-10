@@ -6,7 +6,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import api from '@/lib/api';
-import { Colors, Spacing, BorderRadius, Shadow } from '@/constants/colors';
+// dark theme — valores hardcoded
 
 // ─── Tipos (espelham landing-page/page.tsx do web) ────────────────────────────
 
@@ -248,7 +248,7 @@ export default function LandingPageScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={Colors.primary} />
+        <ActivityIndicator size="large" color={'#2563eb'} />
         <Text style={styles.loadingText}>Carregando...</Text>
       </View>
     );
@@ -263,7 +263,7 @@ export default function LandingPageScreen() {
       <View style={styles.topBar}>
         <View style={styles.topBarLeft}>
           <View style={[styles.topBarIcon, { backgroundColor: currentTab.color }]}>
-            <Ionicons name="sparkles" size={18} color={Colors.white} />
+            <Ionicons name="sparkles" size={18} color={'#151b23'} />
           </View>
           <View>
             <Text style={styles.topBarTitle}>Personalizar Landing Page</Text>
@@ -276,8 +276,8 @@ export default function LandingPageScreen() {
           disabled={saving}
         >
           {saving
-            ? <ActivityIndicator color={Colors.white} size="small" />
-            : <Ionicons name="save" size={18} color={Colors.white} />}
+            ? <ActivityIndicator color={'#151b23'} size="small" />
+            : <Ionicons name="save" size={18} color={'#151b23'} />}
           <Text style={styles.saveBtnText}>{saving ? 'Salvando...' : 'Salvar'}</Text>
         </TouchableOpacity>
       </View>
@@ -298,7 +298,7 @@ export default function LandingPageScreen() {
             <Ionicons
               name={t.icon as any}
               size={16}
-              color={activeTab === t.key ? t.color : Colors.gray[400]}
+              color={activeTab === t.key ? t.color : '#9ca3af'}
             />
             <Text style={[styles.tabBtnText, activeTab === t.key && { color: t.color }]}>
               {t.label}
@@ -330,7 +330,7 @@ export default function LandingPageScreen() {
                     style={styles.removeImgBtn}
                     onPress={() => setConfig(p => ({ ...p, heroImage: '' }))}
                   >
-                    <Ionicons name="close-circle" size={24} color={Colors.error} />
+                    <Ionicons name="close-circle" size={24} color={'#f87171'} />
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -340,9 +340,9 @@ export default function LandingPageScreen() {
                   disabled={uploading}
                 >
                   {uploading
-                    ? <ActivityIndicator color={Colors.primary} />
+                    ? <ActivityIndicator color={'#2563eb'} />
                     : <>
-                        <Ionicons name="cloud-upload-outline" size={32} color={Colors.gray[400]} />
+                        <Ionicons name="cloud-upload-outline" size={32} color={'#9ca3af'} />
                         <Text style={styles.uploadText}>Toque para selecionar imagem</Text>
                         <Text style={styles.uploadSub}>PNG, JPG até 5MB • 1920x1080px</Text>
                       </>}
@@ -374,7 +374,7 @@ export default function LandingPageScreen() {
                 value={config.description}
                 onChangeText={v => setConfig(p => ({ ...p, description: v }))}
                 placeholder="Conte a história da sua barbearia, diferenciais, valores..."
-                placeholderTextColor={Colors.gray[400]}
+                placeholderTextColor={'#9ca3af'}
                 multiline
                 numberOfLines={8}
                 textAlignVertical="top"
@@ -400,7 +400,7 @@ export default function LandingPageScreen() {
                       galleryImages: (p.galleryImages || []).filter((_, j) => j !== i),
                     }))}
                   >
-                    <Ionicons name="close-circle" size={22} color={Colors.error} />
+                    <Ionicons name="close-circle" size={22} color={'#f87171'} />
                   </TouchableOpacity>
                 </View>
               ))}
@@ -411,9 +411,9 @@ export default function LandingPageScreen() {
                   disabled={uploading}
                 >
                   {uploading
-                    ? <ActivityIndicator color={Colors.primary} />
+                    ? <ActivityIndicator color={'#2563eb'} />
                     : <>
-                        <Ionicons name="add" size={28} color={Colors.gray[400]} />
+                        <Ionicons name="add" size={28} color={'#9ca3af'} />
                         <Text style={styles.addGalleryText}>Adicionar</Text>
                       </>}
                 </TouchableOpacity>
@@ -438,7 +438,7 @@ export default function LandingPageScreen() {
                     businessHours: { ...(p.businessHours || {}), [day]: v },
                   }))}
                   placeholder="09:00-20:00 ou Fechado"
-                  placeholderTextColor={Colors.gray[400]}
+                  placeholderTextColor={'#9ca3af'}
                 />
               </View>
             ))}
@@ -465,7 +465,7 @@ export default function LandingPageScreen() {
               <View key={s.key} style={styles.field}>
                 <View style={styles.socialLabelRow}>
                   <View style={[styles.socialIcon, { backgroundColor: s.color }]}>
-                    <Ionicons name={s.icon as any} size={16} color={Colors.white} />
+                    <Ionicons name={s.icon as any} size={16} color={'#151b23'} />
                   </View>
                   <Text style={styles.label}>{s.label}</Text>
                 </View>
@@ -474,7 +474,7 @@ export default function LandingPageScreen() {
                   value={(config as any)[s.key] || ''}
                   onChangeText={v => setConfig(p => ({ ...p, [s.key]: v }))}
                   placeholder={s.ph}
-                  placeholderTextColor={Colors.gray[400]}
+                  placeholderTextColor={'#9ca3af'}
                   autoCapitalize="none"
                   keyboardType="url"
                 />
@@ -512,9 +512,9 @@ export default function LandingPageScreen() {
                   disabled={uploading}
                 >
                   {uploading
-                    ? <ActivityIndicator color={Colors.primary} />
+                    ? <ActivityIndicator color={'#2563eb'} />
                     : <>
-                        <Ionicons name="image-outline" size={32} color={Colors.gray[400]} />
+                        <Ionicons name="image-outline" size={32} color={'#9ca3af'} />
                         <Text style={styles.uploadText}>Toque para enviar o logo</Text>
                         <Text style={styles.uploadSub}>PNG, JPG até 5MB • 512x512px</Text>
                       </>}
@@ -532,10 +532,10 @@ export default function LandingPageScreen() {
             <View style={styles.colorPreview}>
               <Text style={styles.previewLabel}>Preview</Text>
               <View style={[styles.previewBtn, { backgroundColor: config.primaryColor || '#2563eb' }]}>
-                <Text style={{ color: Colors.white, fontWeight: '700' }}>Botão Principal</Text>
+                <Text style={{ color: '#151b23', fontWeight: '700' }}>Botão Principal</Text>
               </View>
               <View style={[styles.previewGradient, { backgroundColor: config.primaryColor || '#2563eb' }]}>
-                <Text style={{ color: Colors.white, fontWeight: '700' }}>Gradiente Hero</Text>
+                <Text style={{ color: '#151b23', fontWeight: '700' }}>Gradiente Hero</Text>
               </View>
             </View>
           </View>
@@ -549,7 +549,7 @@ export default function LandingPageScreen() {
 
             {!Array.isArray(users) || users.length === 0 ? (
               <View style={styles.emptyBox}>
-                <Ionicons name="people-outline" size={48} color={Colors.gray[300]} />
+                <Ionicons name="people-outline" size={48} color={'#6b7280'} />
                 <Text style={styles.emptyText}>Nenhum profissional cadastrado</Text>
               </View>
             ) : (
@@ -573,8 +573,8 @@ export default function LandingPageScreen() {
                           {user.role === 'admin' ? 'Admin' : 'Barbeiro'}
                         </Text>
                       </View>
-                      <View style={[styles.userBadge, { backgroundColor: user.active ? Colors.successBg : Colors.errorBg }]}>
-                        <Text style={[styles.userBadgeText, { color: user.active ? Colors.success : Colors.error }]}>
+                      <View style={[styles.userBadge, { backgroundColor: user.active ? 'rgba(74,222,128,0.1)' : 'rgba(239,68,68,0.1)' }]}>
+                        <Text style={[styles.userBadgeText, { color: user.active ? '#4ade80' : '#f87171' }]}>
                           {user.active ? 'Ativo' : 'Inativo'}
                         </Text>
                       </View>
@@ -585,7 +585,7 @@ export default function LandingPageScreen() {
                       style={styles.avatarUploadBtn}
                       onPress={() => pickAndUploadAvatar(user.id)}
                     >
-                      <Ionicons name="camera" size={16} color={Colors.white} />
+                      <Ionicons name="camera" size={16} color={'#151b23'} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.toggleUserBtn}
@@ -594,7 +594,7 @@ export default function LandingPageScreen() {
                       <Ionicons
                         name={user.active ? 'pause-circle' : 'play-circle'}
                         size={20}
-                        color={user.active ? Colors.warning : Colors.success}
+                        color={user.active ? '#f59e0b' : '#4ade80'}
                       />
                     </TouchableOpacity>
                   </View>
@@ -628,7 +628,7 @@ export default function LandingPageScreen() {
                   value={!!(config as any)[f.key]}
                   onValueChange={v => setConfig(p => ({ ...p, [f.key]: v }))}
                   trackColor={{ true: f.color }}
-                  thumbColor={Colors.white}
+                  thumbColor={'#151b23'}
                 />
               </View>
             ))}
@@ -642,7 +642,7 @@ export default function LandingPageScreen() {
           </View>
         )}
 
-        <View style={{ height: Spacing.xxl }} />
+        <View style={{ height: 64 }} />
       </ScrollView>
     </View>
   );
@@ -666,10 +666,10 @@ function SectionHeader({ icon, color, title, sub }: {
   );
 }
 const sh = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: Spacing.md },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 },
   icon:   { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  title:  { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
-  sub:    { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+  title:  { fontSize: 18, fontWeight: '700', color: '#ffffff' },
+  sub:    { fontSize: 12, color: '#9ca3af', marginTop: 2 },
 });
 
 function Field({ label, value, placeholder, onChange }: {
@@ -683,7 +683,7 @@ function Field({ label, value, placeholder, onChange }: {
         value={value || ''}
         onChangeText={onChange}
         placeholder={placeholder}
-        placeholderTextColor={Colors.gray[400]}
+        placeholderTextColor={'#9ca3af'}
       />
     </View>
   );
@@ -702,7 +702,7 @@ function ColorField({ label, value, onChange }: {
           value={value || ''}
           onChangeText={onChange}
           placeholder="#000000"
-          placeholderTextColor={Colors.gray[400]}
+          placeholderTextColor={'#9ca3af'}
           autoCapitalize="none"
         />
       </View>
@@ -711,88 +711,88 @@ function ColorField({ label, value, onChange }: {
 }
 
 const styles = StyleSheet.create({
-  root:         { flex: 1, backgroundColor: Colors.background },
+  root:         { flex: 1, backgroundColor: '#000000' },
   centered:     { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  loadingText:  { fontSize: 14, color: Colors.textSecondary },
+  loadingText:  { fontSize: 14, color: '#9ca3af' },
   // Top bar
-  topBar:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md, backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  topBar:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingTop: 56, backgroundColor: '#151b23', borderBottomWidth: 1, borderBottomColor: '#1f2937' },
   topBarLeft:    { flexDirection: 'row', alignItems: 'center', gap: 10 },
   topBarIcon:    { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  topBarTitle:   { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
-  topBarSub:     { fontSize: 11, color: Colors.textSecondary },
-  saveBtn:       { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.primary, paddingHorizontal: 16, paddingVertical: 9, borderRadius: BorderRadius.md },
-  saveBtnText:   { color: Colors.white, fontWeight: '700', fontSize: 14 },
+  topBarTitle:   { fontSize: 16, fontWeight: '700', color: '#ffffff' },
+  topBarSub:     { fontSize: 11, color: '#9ca3af' },
+  saveBtn:       { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#2563eb', paddingHorizontal: 16, paddingVertical: 9, borderRadius: 10 },
+  saveBtnText:   { color: '#151b23', fontWeight: '700', fontSize: 14 },
   btnDisabled:   { opacity: 0.6 },
   // Tab bar
-  tabBar:        { backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.border, maxHeight: 50 },
+  tabBar:        { backgroundColor: '#151b23', borderBottomWidth: 1, borderBottomColor: '#1f2937', maxHeight: 50 },
   tabBarContent: { paddingHorizontal: 8 },
   tabBtn:        { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 14, paddingVertical: 13, borderBottomWidth: 3, borderBottomColor: 'transparent' },
-  tabBtnText:    { fontSize: 12, fontWeight: '700', color: Colors.gray[400] },
+  tabBtnText:    { fontSize: 12, fontWeight: '700', color: '#9ca3af' },
   // Content
   contentArea:   { flex: 1 },
-  contentPad:    { padding: Spacing.md },
+  contentPad:    { padding: 16 },
   tabContent:    { gap: 4 },
   // Fields
-  field:         { marginBottom: Spacing.sm },
-  label:         { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, marginBottom: 6 },
-  input:         { backgroundColor: Colors.white, borderWidth: 1, borderColor: Colors.border, borderRadius: BorderRadius.md, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: Colors.textPrimary },
+  field:         { marginBottom: 8 },
+  label:         { fontSize: 13, fontWeight: '600', color: '#9ca3af', marginBottom: 6 },
+  input:         { backgroundColor: '#151b23', borderWidth: 1, borderColor: '#1f2937', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: '#ffffff' },
   textArea:      { minHeight: 120, textAlignVertical: 'top' },
-  charCount:     { fontSize: 11, color: Colors.textMuted, marginTop: 4, textAlign: 'right' },
+  charCount:     { fontSize: 11, color: '#6b7280', marginTop: 4, textAlign: 'right' },
   // Upload
-  uploadBox:     { backgroundColor: Colors.white, borderWidth: 2, borderColor: Colors.border, borderStyle: 'dashed', borderRadius: BorderRadius.lg, padding: 32, alignItems: 'center', gap: 8 },
-  uploadText:    { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
-  uploadSub:     { fontSize: 12, color: Colors.textMuted },
+  uploadBox:     { backgroundColor: '#151b23', borderWidth: 2, borderColor: '#1f2937', borderStyle: 'dashed', borderRadius: 16, padding: 32, alignItems: 'center', gap: 8 },
+  uploadText:    { fontSize: 14, fontWeight: '600', color: '#9ca3af' },
+  uploadSub:     { fontSize: 12, color: '#6b7280' },
   imagePreview:  { position: 'relative' },
-  heroImg:       { width: '100%', height: 180, borderRadius: BorderRadius.lg, resizeMode: 'cover' },
+  heroImg:       { width: '100%', height: 180, borderRadius: 16, resizeMode: 'cover' },
   removeImgBtn:  { position: 'absolute', top: 8, right: 8 },
   // Gallery
   galleryGrid:      { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   galleryItem:      { width: '30%', aspectRatio: 1, position: 'relative' },
-  galleryImg:       { width: '100%', height: '100%', borderRadius: BorderRadius.md, resizeMode: 'cover' },
+  galleryImg:       { width: '100%', height: '100%', borderRadius: 10, resizeMode: 'cover' },
   removeGalleryBtn: { position: 'absolute', top: 4, right: 4 },
-  addGalleryBtn:    { width: '30%', aspectRatio: 1, backgroundColor: Colors.white, borderWidth: 2, borderColor: Colors.border, borderStyle: 'dashed', borderRadius: BorderRadius.md, alignItems: 'center', justifyContent: 'center', gap: 4 },
-  addGalleryText:   { fontSize: 11, fontWeight: '600', color: Colors.textMuted },
+  addGalleryBtn:    { width: '30%', aspectRatio: 1, backgroundColor: '#151b23', borderWidth: 2, borderColor: '#1f2937', borderStyle: 'dashed', borderRadius: 10, alignItems: 'center', justifyContent: 'center', gap: 4 },
+  addGalleryText:   { fontSize: 11, fontWeight: '600', color: '#6b7280' },
   // Hours
   hoursRow:    { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
-  dayLabel:    { width: 100, fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
+  dayLabel:    { width: 100, fontSize: 13, fontWeight: '600', color: '#9ca3af' },
   hoursInput:  { flex: 1, paddingVertical: 10 },
-  tipBox:      { flexDirection: 'row', gap: 8, backgroundColor: '#f0fdf4', borderRadius: BorderRadius.md, padding: 12, marginTop: 4, borderWidth: 1, borderColor: '#bbf7d0' },
+  tipBox:      { flexDirection: 'row', gap: 8, backgroundColor: '#f0fdf4', borderRadius: 10, padding: 12, marginTop: 4, borderWidth: 1, borderColor: '#bbf7d0' },
   tipText:     { flex: 1, fontSize: 12, color: '#166534' },
   // Social
   socialLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
   socialIcon:     { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   // Design
   logoContainer:     { alignItems: 'center', gap: 12 },
-  logoImg:           { width: 120, height: 120, borderRadius: 16, resizeMode: 'contain', borderWidth: 2, borderColor: Colors.border },
-  changeLogoBtn:     { backgroundColor: Colors.primary, paddingHorizontal: 20, paddingVertical: 8, borderRadius: BorderRadius.md },
-  changeLogoBtnText: { color: Colors.white, fontWeight: '700' },
+  logoImg:           { width: 120, height: 120, borderRadius: 16, resizeMode: 'contain', borderWidth: 2, borderColor: '#1f2937' },
+  changeLogoBtn:     { backgroundColor: '#2563eb', paddingHorizontal: 20, paddingVertical: 8, borderRadius: 10 },
+  changeLogoBtnText: { color: '#151b23', fontWeight: '700' },
   colorRow:          { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  colorSwatch:       { width: 44, height: 44, borderRadius: 10, borderWidth: 2, borderColor: Colors.border },
-  colorPreview:      { backgroundColor: Colors.white, borderRadius: BorderRadius.lg, padding: Spacing.md, borderWidth: 1, borderColor: Colors.border, gap: 10, marginTop: 4 },
-  previewLabel:      { fontSize: 13, fontWeight: '700', color: Colors.textSecondary },
+  colorSwatch:       { width: 44, height: 44, borderRadius: 10, borderWidth: 2, borderColor: '#1f2937' },
+  colorPreview:      { backgroundColor: '#151b23', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#1f2937', gap: 10, marginTop: 4 },
+  previewLabel:      { fontSize: 13, fontWeight: '700', color: '#9ca3af' },
   previewBtn:        { borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
   previewGradient:   { borderRadius: 10, paddingVertical: 14, alignItems: 'center' },
   // Team
-  userCard:              { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: Colors.white, borderRadius: BorderRadius.lg, padding: 14, marginBottom: 8, ...Shadow.sm, borderWidth: 1, borderColor: Colors.border },
+  userCard:              { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#151b23', borderRadius: 16, padding: 14, marginBottom: 8,  borderWidth: 1, borderColor: '#1f2937' },
   userAvatarBox:         { width: 52, height: 52, borderRadius: 26, overflow: 'hidden' },
   userAvatar:            { width: '100%', height: '100%' },
-  userAvatarPlaceholder: { width: 52, height: 52, borderRadius: 26, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
-  userAvatarInitial:     { fontSize: 22, fontWeight: '700', color: Colors.white },
-  userName:              { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
-  userEmail:             { fontSize: 12, color: Colors.textSecondary },
+  userAvatarPlaceholder: { width: 52, height: 52, borderRadius: 26, backgroundColor: '#2563eb', alignItems: 'center', justifyContent: 'center' },
+  userAvatarInitial:     { fontSize: 22, fontWeight: '700', color: '#151b23' },
+  userName:              { fontSize: 14, fontWeight: '700', color: '#ffffff' },
+  userEmail:             { fontSize: 12, color: '#9ca3af' },
   userBadgeRow:          { flexDirection: 'row', gap: 6, marginTop: 4 },
   userBadge:             { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
   userBadgeText:         { fontSize: 11, fontWeight: '700' },
   userActions:           { flexDirection: 'column', alignItems: 'center', gap: 8 },
-  avatarUploadBtn:       { backgroundColor: Colors.primary, padding: 8, borderRadius: 8 },
+  avatarUploadBtn:       { backgroundColor: '#2563eb', padding: 8, borderRadius: 8 },
   toggleUserBtn:         { padding: 4 },
   // Features
-  featureRow:   { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: Colors.white, borderRadius: BorderRadius.lg, padding: Spacing.md, marginBottom: 8, ...Shadow.sm, borderWidth: 1, borderColor: Colors.border },
+  featureRow:   { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#151b23', borderRadius: 16, padding: 16, marginBottom: 8,  borderWidth: 1, borderColor: '#1f2937' },
   featureIcon:  { width: 46, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  featureLabel: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
-  featureSub:   { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  infoBox:      { flexDirection: 'row', gap: 8, backgroundColor: '#eef2ff', borderRadius: BorderRadius.md, padding: 12, marginTop: 4, borderWidth: 1, borderColor: '#c7d2fe' },
+  featureLabel: { fontSize: 15, fontWeight: '700', color: '#ffffff' },
+  featureSub:   { fontSize: 12, color: '#9ca3af', marginTop: 2 },
+  infoBox:      { flexDirection: 'row', gap: 8, backgroundColor: '#eef2ff', borderRadius: 10, padding: 12, marginTop: 4, borderWidth: 1, borderColor: '#c7d2fe' },
   infoText:     { flex: 1, fontSize: 12, color: '#4338ca', lineHeight: 17 },
   emptyBox:     { alignItems: 'center', paddingVertical: 40, gap: 10 },
-  emptyText:    { fontSize: 14, color: Colors.textSecondary },
+  emptyText:    { fontSize: 14, color: '#9ca3af' },
 });

@@ -1,5 +1,6 @@
 import axios, { InternalAxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
+import { router } from 'expo-router';
 
 const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_URL ||
@@ -13,7 +14,6 @@ const clientApi = axios.create({
 
 clientApi.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    // ✅ Chave corrigida — sem @ ou : (inválidos no SecureStore)
     const token = await SecureStore.getItemAsync('barberFlow_client_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -33,9 +33,11 @@ clientApi.interceptors.response.use(
     console.error('❌ [CLIENT-API] Erro:', status, url, msg);
 
     if (status === 401) {
-      // ✅ Chaves corrigidas
+      // Limpa sessão e redireciona para login
       await SecureStore.deleteItemAsync('barberFlow_client_token');
       await SecureStore.deleteItemAsync('barberFlow_client_user');
+      console.log('🔒 [CLIENT-API] Sessão expirada — redirecionando para login');
+      router.replace('/(auth)/login');
     }
 
     return Promise.reject(error);

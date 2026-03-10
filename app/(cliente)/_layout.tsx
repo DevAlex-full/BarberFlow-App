@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { Tabs, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/stores/authStore';
-import { Colors } from '@/constants/colors';
 
 export default function ClienteLayout() {
   const { clientUser, clientLoading } = useAuthStore();
@@ -19,11 +18,11 @@ export default function ClienteLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.gray[400],
+        tabBarActiveTintColor: '#2563eb',
+        tabBarInactiveTintColor: '#6b7280',
         tabBarStyle: {
-          backgroundColor: Colors.white,
-          borderTopColor: Colors.border,
+          backgroundColor: '#151b23',
+          borderTopColor: '#1f2937',
           borderTopWidth: 1,
           height: 60,
           paddingBottom: 8,
