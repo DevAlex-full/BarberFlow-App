@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import clientApi from '@/lib/client-api';
+import { useAuthStore } from '@/stores/authStore';
 import { Badge } from '@/components/ui/Badge';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
@@ -44,6 +45,8 @@ const STATUS_VARIANT: Record<AppStatus, any> = {
 // ─── Componente ───────────────────────────────────────────────────────────────
 
 export default function AgendamentosScreen() {
+  const { clientUser } = useAuthStore();
+
   const [appointments,    setAppointments]    = useState<Appointment[]>([]);
   const [loading,         setLoading]         = useState(true);
   const [refreshing,      setRefreshing]      = useState(false);
@@ -104,11 +107,11 @@ export default function AgendamentosScreen() {
   const countOf = (s: AppStatus) => appointments.filter(a => a.status === s).length;
 
   const FILTERS: { key: FilterType; label: string; count: number }[] = [
-    { key: 'all',       label: 'Todos',      count: appointments.length },
-    { key: 'scheduled', label: 'Agendados',  count: countOf('scheduled') },
-    { key: 'confirmed', label: 'Confirmados',count: countOf('confirmed') },
-    { key: 'completed', label: 'Concluídos', count: countOf('completed') },
-    { key: 'cancelled', label: 'Cancelados', count: countOf('cancelled') },
+    { key: 'all',       label: 'Todos',       count: appointments.length },
+    { key: 'scheduled', label: 'Agendados',   count: countOf('scheduled') },
+    { key: 'confirmed', label: 'Confirmados', count: countOf('confirmed') },
+    { key: 'completed', label: 'Concluídos',  count: countOf('completed') },
+    { key: 'cancelled', label: 'Cancelados',  count: countOf('cancelled') },
   ];
 
   if (loading) {
@@ -124,7 +127,15 @@ export default function AgendamentosScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Meus Agendamentos</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.headerTitle}>Meus Agendamentos</Text>
+          {!!clientUser?.name && (
+            <Text style={styles.headerSub}>Olá, {clientUser.name}! 👋</Text>
+          )}
+        </View>
+        <TouchableOpacity onPress={onRefresh} style={styles.refreshBtn}>
+          <Ionicons name="refresh-outline" size={22} color={'#2563eb'} />
+        </TouchableOpacity>
       </View>
 
       {/* Filtros */}
@@ -140,7 +151,7 @@ export default function AgendamentosScreen() {
             style={[styles.filterChip, filter === f.key && styles.filterChipActive]}
             onPress={() => setFilter(f.key)}
           >
-            <Text style={[styles.filterText, filter === f.key && styles.filterTextActive]} numberOfLines={1}>
+            <Text style={[styles.filterText, filter === f.key && styles.filterTextActive]}>
               {f.label} ({f.count})
             </Text>
           </TouchableOpacity>
@@ -355,16 +366,19 @@ function AppointmentCard({
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000000' },
-  centered:  { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  container:   { flex: 1, backgroundColor: '#000000' },
+  centered:    { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   loadingText: { fontSize: 14, color: '#9ca3af' },
 
   header: {
     backgroundColor: '#151b23', paddingHorizontal: 16,
     paddingTop: 56, paddingBottom: 16,
     borderBottomWidth: 1, borderBottomColor: '#1f2937',
+    flexDirection: 'row', alignItems: 'center',
   },
   headerTitle: { fontSize: 22, fontWeight: '700', color: '#ffffff' },
+  headerSub:   { fontSize: 13, color: '#9ca3af', marginTop: 2 },
+  refreshBtn:  { padding: 8 },
 
   filtersScroll:   { backgroundColor: '#151b23', borderBottomWidth: 1, borderBottomColor: '#1f2937' },
   filtersContent:  { paddingHorizontal: 16, paddingVertical: 10, gap: 8, flexDirection: 'row', alignItems: 'center' },
@@ -373,30 +387,31 @@ const styles = StyleSheet.create({
     backgroundColor: '#1f2937', borderRadius: 20,
     borderWidth: 1, borderColor: '#1f2937',
     alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
   },
   filterChipActive: { backgroundColor: '#2563eb', borderColor: '#2563eb' },
-  filterText:       { fontSize: 13, fontWeight: '600', color: '#9ca3af' },
+  filterText:       { fontSize: 13, fontWeight: '600', color: '#9ca3af', flexShrink: 0 },
   filterTextActive: { color: '#ffffff' },
 
-  listContent:  { padding: 16, gap: 12 },
+  listContent:   { padding: 16, gap: 12 },
   sectionHeader: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     marginTop: 8, marginBottom: 4,
   },
   sectionTitle: { fontSize: 17, fontWeight: '700', color: '#ffffff' },
 
-  empty:     { alignItems: 'center', paddingTop: 60, gap: 12, paddingHorizontal: 32 },
+  empty:      { alignItems: 'center', paddingTop: 60, gap: 12, paddingHorizontal: 32 },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: '#ffffff' },
   emptyText:  { fontSize: 14, color: '#9ca3af', textAlign: 'center', lineHeight: 20 },
 
   // Card
   card: {
     backgroundColor: '#151b23', borderRadius: 16,
-    padding: 16, borderWidth: 1, borderColor: '#1f2937', 
+    padding: 16, borderWidth: 1, borderColor: '#1f2937',
     gap: 12,
   },
-  cardPast: { opacity: 0.75 },
-  cardTop:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  cardPast:    { opacity: 0.75 },
+  cardTop:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   cardTopLeft: { flex: 1, gap: 6 },
   cardShopName: { fontSize: 17, fontWeight: '700', color: '#ffffff' },
 
@@ -422,8 +437,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingTop: 10, borderTopWidth: 1, borderTopColor: '#1f2937',
   },
-  cardPrice:  { fontSize: 18, fontWeight: '700', color: '#2563eb' },
-  cancelBtn:  { paddingHorizontal: 14, paddingVertical: 6, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: 10 },
+  cardPrice:     { fontSize: 18, fontWeight: '700', color: '#2563eb' },
+  cancelBtn:     { paddingHorizontal: 14, paddingVertical: 6, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: 10 },
   cancelBtnText: { fontSize: 13, fontWeight: '600', color: '#f87171' },
 
   // Modal
@@ -435,8 +450,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#151b23', borderRadius: 16,
     padding: 20, width: '100%', maxWidth: 400, gap: 16,
   },
-  modalClose: { alignSelf: 'flex-end', padding: 4 },
-  modalIconRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  modalClose:    { alignSelf: 'flex-end', padding: 4 },
+  modalIconRow:  { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   modalTitle:    { fontSize: 18, fontWeight: '700', color: '#ffffff' },
   modalSubtitle: { fontSize: 13, color: '#9ca3af', marginTop: 2 },
   modalSummary: {
@@ -451,13 +466,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(234,179,8,0.1)', borderRadius: 10,
     padding: 12, borderWidth: 1, borderColor: 'rgba(234,179,8,0.3)',
   },
-  modalWarningText: { fontSize: 12, color: '#fef08a', flex: 1, lineHeight: 18 },
-  modalBtns:        { flexDirection: 'row', gap: 10 },
+  modalWarningText:    { fontSize: 12, color: '#fef08a', flex: 1, lineHeight: 18 },
+  modalBtns:           { flexDirection: 'row', gap: 10 },
   modalBtnBack: {
     flex: 1, backgroundColor: '#1f2937', borderRadius: 10,
     paddingVertical: 12, alignItems: 'center',
   },
-  modalBtnBackText:     { fontWeight: '700', color: '#9ca3af' },
+  modalBtnBackText: { fontWeight: '700', color: '#9ca3af' },
   modalBtnConfirm: {
     flex: 1, backgroundColor: '#f87171', borderRadius: 10,
     paddingVertical: 12, alignItems: 'center',

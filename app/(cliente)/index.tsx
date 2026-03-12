@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, ScrollView, TextInput, TouchableOpacity,
-  StyleSheet, ActivityIndicator, RefreshControl,
+  StyleSheet, ActivityIndicator, RefreshControl, Image, Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -10,62 +10,72 @@ import * as Location from 'expo-location';
 import clientApi from '@/lib/client-api';
 import { useAuthStore } from '@/stores/authStore';
 import { BarbershopCard } from '@/components/cliente/BarbershopCard';
+const DEFAULT_LOGO = require('../../assets/images/logo4.png');
 
 interface Barbershop {
   id: string;
   name: string;
-  description?: string;
+  description?: string | null;
   address?: string | null;
   city?: string | null;
   state?: string | null;
   phone?: string;
   logo?: string | null;
-  rating?: number;
-  totalReviews?: number;
+  rating?: number | null;
+  totalReviews?: number | null;
   plan: string;
   latitude?: number | null;
   longitude?: number | null;
-  distance?: number | null; // km (vem do servidor no endpoint /nearby)
+  distance?: number | null; // km vindo do servidor
 }
 
 export default function ClienteHomeScreen() {
   const { clientUser } = useAuthStore();
 
-  const [allBarbershops,  setAllBarbershops]  = useState<Barbershop[]>([]);
+  const [allBarbershops,    setAllBarbershops]    = useState<Barbershop[]>([]);
   const [nearbyBarbershops, setNearbyBarbershops] = useState<Barbershop[]>([]);
-  const [loading,    setLoading]    = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [search,     setSearch]     = useState('');
-  const [locDenied,  setLocDenied]  = useState(false);
-  const [locLoading, setLocLoading] = useState(false);
-  const [radius,     setRadius]     = useState(10);
-  const [showRadiusPicker, setShowRadiusPicker] = useState(false);
-  const [userCoords, setUserCoords] = useState<{ lat: number; lon: number } | null>(null);
+  const [loading,           setLoading]           = useState(true);
+  const [refreshing,        setRefreshing]        = useState(false);
+  const [search,            setSearch]            = useState('');
+  const [locDenied,         setLocDenied]         = useState(false);
 
-  // Data formatada: "segunda-feira, 9 de mar. de 2026"
+  // Idioma
+  const LANGS = [
+    { code: 'PT', flag: '🇧🇷', label: 'Português' },
+    { code: 'EN', flag: '🇺🇸', label: 'English (US)' },
+    { code: 'ES', flag: '🇪🇸', label: 'Español' },
+  ];
+  const [selLang,      setSelLang]      = useState(LANGS[0]);
+  const [showLangMenu, setShowLangMenu] = useState(false);
+  const [locLoading,        setLocLoading]        = useState(false);
+  const [radius,            setRadius]            = useState(10);
+  const [showRadiusPicker,  setShowRadiusPicker]  = useState(false);
+  const [userCoords,        setUserCoords]        = useState<{ lat: number; lon: number } | null>(null);
+
+  // Data: "terça-feira, 10 de mar. de 2026"
   const today = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long', day: 'numeric', month: 'short', year: 'numeric',
   });
 
-  // ── Buscar barbearias próximas via servidor ───────────────────────────────
+  // ── Barbearias próximas ───────────────────────────────────────────────────
   const loadNearby = useCallback(async (lat: number, lon: number, r: number = 10) => {
     try {
-      // Usa o endpoint já existente no backend que calcula distância server-side
       const res = await clientApi.get('/barbershop-location/nearby', {
         params: { lat, lng: lon, radius: r },
       });
       const data = res.data?.barbershops || [];
-      // distance vem em km do servidor
-      setNearbyBarbershops(data.map((b: any) => ({
-        ...b,
-        distance: b.distance != null ? b.distance * 1000 : null, // converte para metros
-      })));
+      setNearbyBarbershops(
+        data.map((b: any) => ({
+          ...b,
+          distance: b.distance != null ? b.distance * 1000 : null, // → metros
+        }))
+      );
     } catch {
       console.error('Erro ao buscar barbearias próximas');
     }
   }, []);
 
-  // ── Buscar todas as barbearias (fallback sem localização) ─────────────────
+  // ── Todas as barbearias (fallback) ────────────────────────────────────────
   const loadAll = useCallback(async () => {
     try {
       const res = await clientApi.get('/public/barbershops');
@@ -75,18 +85,13 @@ export default function ClienteHomeScreen() {
     }
   }, []);
 
-  // ── Pedir permissão de localização ────────────────────────────────────────
+  // ── Solicitar localização ─────────────────────────────────────────────────
   const requestLocation = useCallback(async () => {
     setLocLoading(true);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setLocDenied(true);
-        return;
-      }
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+      if (status !== 'granted') { setLocDenied(true); return; }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       setLocDenied(false);
       setUserCoords({ lat: loc.coords.latitude, lon: loc.coords.longitude });
       await loadNearby(loc.coords.latitude, loc.coords.longitude);
@@ -97,17 +102,14 @@ export default function ClienteHomeScreen() {
     }
   }, [loadNearby]);
 
-  // ── Carregar tudo no mount ────────────────────────────────────────────────
+  // ── Mount ─────────────────────────────────────────────────────────────────
   async function load() {
     setLoading(true);
     await loadAll();
-
     try {
       const { status } = await Location.getForegroundPermissionsAsync();
       if (status === 'granted') {
-        const loc = await Location.getCurrentPositionAsync({
-          accuracy: Location.Accuracy.Balanced,
-        });
+        const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
         setUserCoords({ lat: loc.coords.latitude, lon: loc.coords.longitude });
         await loadNearby(loc.coords.latitude, loc.coords.longitude);
         setLocDenied(false);
@@ -129,25 +131,20 @@ export default function ClienteHomeScreen() {
     setRefreshing(false);
   }
 
-  // ── Listas calculadas ─────────────────────────────────────────────────────
   function openMap() {
-    // Se há barbearias próximas, abre o mapa com todas elas como pins
     if (nearbyBarbershops.length > 0) {
       const first = nearbyBarbershops[0];
       if (first.latitude && first.longitude) {
-        // Abre Google Maps centrado nas coordenadas da barbearia mais próxima
-        const label = encodeURIComponent(first.name);
         Linking.openURL(
-          `https://maps.google.com/maps?q=${first.latitude},${first.longitude}(${label})&z=16`
+          `https://maps.google.com/maps?q=${first.latitude},${first.longitude}(${encodeURIComponent(first.name)})&z=16`
         );
         return;
       }
-      // Fallback: busca por nome+endereço
-      const query = encodeURIComponent(`${first.name} ${first.address || ''} ${first.city || ''}`);
-      Linking.openURL(`https://maps.google.com/maps?q=${query}`);
+      Linking.openURL(
+        `https://maps.google.com/maps?q=${encodeURIComponent(`${first.name} ${first.address || ''} ${first.city || ''}`)}`
+      );
       return;
     }
-    // Sem barbearias — abre mapa com localização do usuário
     if (userCoords) {
       Linking.openURL(`https://maps.google.com/maps?q=barbearia&near=${userCoords.lat},${userCoords.lon}`);
     } else {
@@ -161,10 +158,7 @@ export default function ClienteHomeScreen() {
     if (userCoords) await loadNearby(userCoords.lat, userCoords.lon, r);
   }
 
-  const featured = allBarbershops
-    .filter(b => b.plan === 'premium' || b.plan === 'enterprise')
-    .slice(0, 8);
-
+  // ── Listas ────────────────────────────────────────────────────────────────
   const filtered = search
     ? allBarbershops.filter(b =>
         b.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -173,9 +167,8 @@ export default function ClienteHomeScreen() {
       )
     : [];
 
-  // IDs das próximas para não duplicar na seção "Todas"
-  const nearbyIds = new Set(nearbyBarbershops.map(b => b.id));
-  const otherBarbershops = allBarbershops.filter(b => !nearbyIds.has(b.id));
+  const nearbyIds         = new Set(nearbyBarbershops.map(b => b.id));
+  const otherBarbershops  = allBarbershops.filter(b => !nearbyIds.has(b.id));
 
   if (loading) {
     return (
@@ -192,20 +185,48 @@ export default function ClienteHomeScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2563eb" />}
       showsVerticalScrollIndicator={false}
     >
-      {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <View style={styles.hero}>
-        <View style={styles.heroTop}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.heroTitle}>Seja bem vindo(a)</Text>
-            <Text style={styles.heroDate}>{today}</Text>
+      {/* ── Topbar — logo + seletor de idioma (igual ao web) ───────────── */}
+      <View style={styles.topbar}>
+        <Image source={DEFAULT_LOGO} style={styles.topbarLogo} resizeMode="contain" />
+
+        {/* Botão idioma */}
+        <TouchableOpacity style={styles.langBtn} onPress={() => setShowLangMenu(true)}>
+          <Text style={styles.langFlag}>{selLang.flag}</Text>
+          <Text style={styles.langText}>{selLang.label}</Text>
+          <Ionicons name="chevron-down" size={12} color="#9ca3af" />
+        </TouchableOpacity>
+      </View>
+
+      {/* ── Modal dropdown de idiomas ────────────────────────────────────── */}
+      <Modal visible={showLangMenu} transparent animationType="fade" onRequestClose={() => setShowLangMenu(false)}>
+        <TouchableOpacity style={styles.langOverlay} activeOpacity={1} onPress={() => setShowLangMenu(false)}>
+          <View style={styles.langDropdown}>
+            {LANGS.map(l => (
+              <TouchableOpacity
+                key={l.code}
+                style={[styles.langOption, selLang.code === l.code && styles.langOptionActive]}
+                onPress={() => { setSelLang(l); setShowLangMenu(false); }}
+              >
+                <Text style={styles.langOptionFlag}>{l.flag}</Text>
+                <Text style={[styles.langOptionText, selLang.code === l.code && { color: '#ffffff' }]}>
+                  {l.label}
+                </Text>
+                {selLang.code === l.code && (
+                  <Ionicons name="checkmark" size={16} color="#2563eb" style={{ marginLeft: 'auto' }} />
+                )}
+              </TouchableOpacity>
+            ))}
           </View>
-          <TouchableOpacity
-            style={styles.notifBtn}
-            onPress={() => router.push('/(cliente)/agendamentos')}
-          >
-            <Ionicons name="calendar-outline" size={24} color="#ffffff" />
-          </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ── Hero — centralizado igual ao web ────────────────────────────── */}
+      <View style={styles.hero}>
+        <Text style={styles.heroTitle}>Seja bem vindo(a)</Text>
+        {!!clientUser?.name && (
+          <Text style={styles.heroName}>{clientUser.name}</Text>
+        )}
+        <Text style={styles.heroDate}>{today}</Text>
 
         {/* Busca */}
         <View style={styles.searchBox}>
@@ -227,7 +248,7 @@ export default function ClienteHomeScreen() {
         </View>
       </View>
 
-      {/* ── Resultados de busca ───────────────────────────────────────────── */}
+      {/* ── Resultados de busca ──────────────────────────────────────────── */}
       {!!search && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Resultados ({filtered.length})</Text>
@@ -250,52 +271,57 @@ export default function ClienteHomeScreen() {
         </View>
       )}
 
-      {/* Destaques removido — não existe no web */}
-
-      {/* ── Empresas próximas ─────────────────────────────────────────────── */}
+      {/* ── Empresas próximas ───────────────────────────────────────────── */}
       {!search && (
         <View style={styles.section}>
-          <View style={styles.sectionRow}>
+          {/* Linha única: título + raio + mapa + count — igual ao web */}
+          <View style={styles.nearbyHeader}>
             <Text style={styles.sectionTitle}>Empresas próximas</Text>
-            {nearbyBarbershops.length > 0 && (
-              <Text style={styles.sectionCount}>
-                {nearbyBarbershops.length} barbearia{nearbyBarbershops.length !== 1 ? 's' : ''}
-              </Text>
-            )}
-          </View>
-
-          {/* Raio + Mapa */}
-          <View style={styles.radiusRow}>
-            <TouchableOpacity style={styles.radiusBtn} onPress={() => setShowRadiusPicker(p => !p)}>
-              <Text style={styles.radiusBtnText}>Raio: {radius} km</Text>
-              <Ionicons name="chevron-down" size={14} color="#9ca3af" />
-            </TouchableOpacity>
-            {showRadiusPicker && (
-              <View style={styles.radiusPicker}>
-                {[5, 10, 20, 50].map(r => (
-                  <TouchableOpacity
-                    key={r}
-                    style={[styles.radiusOption, radius === r && styles.radiusOptionActive]}
-                    onPress={() => handleRadiusChange(r)}
-                  >
-                    <Text style={[styles.radiusOptionText, radius === r && { color: '#ffffff' }]}>{r} km</Text>
-                  </TouchableOpacity>
-                ))}
+            <View style={styles.nearbyControls}>
+              {/* Raio */}
+              <View style={{ position: 'relative', zIndex: 10 }}>
+                <TouchableOpacity
+                  style={styles.radiusBtn}
+                  onPress={() => setShowRadiusPicker(p => !p)}
+                >
+                  <Text style={styles.radiusBtnText}>{radius} km</Text>
+                  <Ionicons name="chevron-down" size={12} color="#9ca3af" />
+                </TouchableOpacity>
+                {showRadiusPicker && (
+                  <View style={styles.radiusPicker}>
+                    {[5, 10, 20, 50].map(r => (
+                      <TouchableOpacity
+                        key={r}
+                        style={[styles.radiusOption, radius === r && styles.radiusOptionActive]}
+                        onPress={() => handleRadiusChange(r)}
+                      >
+                        <Text style={[styles.radiusOptionText, radius === r && { color: '#ffffff' }]}>
+                          {r} km
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
-            )}
-            <TouchableOpacity style={styles.mapBtn} onPress={openMap}>
-              <Ionicons name="map" size={16} color="#ffffff" />
-              <Text style={styles.mapBtnText}>Mapa</Text>
-            </TouchableOpacity>
+
+              {/* Mapa */}
+              <TouchableOpacity style={styles.mapBtn} onPress={openMap}>
+                <Ionicons name="map" size={14} color="#ffffff" />
+                <Text style={styles.mapBtnText}>Mapa</Text>
+              </TouchableOpacity>
+
+              {/* Count */}
+              {nearbyBarbershops.length > 0 && (
+                <Text style={styles.sectionCount}>
+                  {nearbyBarbershops.length} barbearia{nearbyBarbershops.length !== 1 ? 's' : ''}
+                </Text>
+              )}
+            </View>
           </View>
 
-          {/* Card de habilitar localização */}
+          {/* Card habilitar localização */}
           {locDenied && (
-            <TouchableOpacity
-              style={styles.locCard}
-              onPress={requestLocation}
-              activeOpacity={0.85}
-            >
+            <TouchableOpacity style={styles.locCard} onPress={requestLocation} activeOpacity={0.85}>
               <Ionicons name="location" size={40} color="#f87171" />
               <Text style={styles.locTitle}>Habilitar localização</Text>
               <Text style={styles.locSub}>
@@ -310,7 +336,7 @@ export default function ClienteHomeScreen() {
             </TouchableOpacity>
           )}
 
-          {/* Lista próximas */}
+          {/* Próximas */}
           {nearbyBarbershops.length > 0 && (
             <View style={styles.vList}>
               {nearbyBarbershops.map(b => (
@@ -322,7 +348,7 @@ export default function ClienteHomeScreen() {
             </View>
           )}
 
-          {/* Demais barbearias */}
+          {/* Todas (excluindo as próximas) */}
           {otherBarbershops.length > 0 && (
             <>
               <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Todas as Barbearias</Text>
@@ -337,7 +363,7 @@ export default function ClienteHomeScreen() {
             </>
           )}
 
-          {/* Sem barbearias e sem erro */}
+          {/* Empty total */}
           {nearbyBarbershops.length === 0 && allBarbershops.length === 0 && (
             <View style={styles.empty}>
               <Ionicons name="cut-outline" size={48} color="#6b7280" />
@@ -356,38 +382,117 @@ const styles = StyleSheet.create({
   content:   { paddingBottom: 40 },
   centered:  { flex: 1, alignItems: 'center', justifyContent: 'center' },
 
-  // Hero
+  // Hero — centralizado igual ao web
   hero: {
-    backgroundColor: '#151b23',
-    borderBottomWidth: 1, borderBottomColor: '#1f2937',
-    paddingHorizontal: 16, paddingTop: 56, paddingBottom: 20, gap: 16,
+    backgroundColor: '#000000',
+    paddingHorizontal: 24,
+    paddingTop: 24, paddingBottom: 36,
+    alignItems: 'center',
+    gap: 8,
   },
-  heroTop:   { flexDirection: 'row', alignItems: 'flex-start' },
-  heroTitle: { fontSize: 26, fontWeight: '700', color: '#ffffff' },
-  heroDate:  { fontSize: 13, color: '#9ca3af', marginTop: 6 },
-  notifBtn:  { padding: 4, marginTop: 4 },
+
+  // Topbar — logo + BR idioma
+  topbar: {
+    backgroundColor: '#000000',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingTop: 52, paddingBottom: 12,
+    borderBottomWidth: 1, borderBottomColor: '#111827',
+  },
+  topbarLogo: { width: 40, height: 40 },
+  langBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#111827', borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 8,
+    borderWidth: 1, borderColor: '#374151',
+  },
+  langFlag: { fontSize: 16 },
+  langText: { fontSize: 13, fontWeight: '600', color: '#ffffff' },
+
+  // Dropdown de idiomas
+  langOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-start', alignItems: 'flex-end',
+    paddingTop: 110, paddingRight: 16,
+  },
+  langDropdown: {
+    backgroundColor: '#1f2937', borderRadius: 14,
+    borderWidth: 1, borderColor: '#374151',
+    overflow: 'hidden', minWidth: 180,
+  },
+  langOption: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 16, paddingVertical: 13,
+    borderBottomWidth: 1, borderBottomColor: '#374151',
+  },
+  langOptionActive: { backgroundColor: '#2563eb22' },
+  langOptionFlag:   { fontSize: 20 },
+  langOptionText:   { fontSize: 14, fontWeight: '600', color: '#9ca3af', flex: 1 },
+
+  heroTitle: { fontSize: 30, fontWeight: '700', color: '#ffffff', textAlign: 'center' },
+  heroName:  { fontSize: 20, fontWeight: '600', color: '#ffffff', textAlign: 'center', marginTop: -4 },
+  heroDate:  { fontSize: 13, color: '#9ca3af', textAlign: 'center', marginBottom: 8 },
 
   searchBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#1f2937', borderRadius: 12,
-    borderWidth: 1, borderColor: '#374151',
+    backgroundColor: '#111827',
+    borderRadius: 12, borderWidth: 1, borderColor: '#1f2937',
     paddingHorizontal: 16, paddingVertical: 14,
+    width: '100%',
   },
   searchInput: { flex: 1, fontSize: 15, color: '#ffffff' },
 
   // Sections
-  section:      { paddingHorizontal: 16, marginTop: 24 },
-  sectionRow:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { fontSize: 17, fontWeight: '700', color: '#ffffff', marginBottom: 12 },
+  section: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    backgroundColor: '#0d1117',
+    borderTopWidth: 1, borderTopColor: '#1f2937',
+    paddingBottom: 24,
+  },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#ffffff' },
   sectionCount: { fontSize: 13, color: '#9ca3af' },
-  hList:        { gap: 12 },
-  vList:        { gap: 12 },
+  vList: { gap: 12, marginTop: 16 },
+
+  // Linha única: "Empresas próximas" + raio + mapa + count
+  nearbyHeader: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', flexWrap: 'wrap', gap: 8,
+    marginBottom: 0,
+  },
+  nearbyControls: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+
+  // Raio
+  radiusBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#1f2937', borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 7,
+    borderWidth: 1, borderColor: '#374151',
+  },
+  radiusBtnText: { fontSize: 13, fontWeight: '600', color: '#9ca3af' },
+  radiusPicker: {
+    position: 'absolute', top: 40, right: 0,
+    backgroundColor: '#1f2937', borderRadius: 10,
+    borderWidth: 1, borderColor: '#374151', zIndex: 99,
+    minWidth: 80,
+  },
+  radiusOption:       { paddingHorizontal: 20, paddingVertical: 10 },
+  radiusOptionActive: { backgroundColor: '#2563eb', borderRadius: 8 },
+  radiusOptionText:   { fontSize: 13, fontWeight: '600', color: '#9ca3af' },
+
+  // Mapa — azul igual ao web
+  mapBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: '#2563eb', borderRadius: 8,
+    paddingHorizontal: 12, paddingVertical: 7,
+  },
+  mapBtnText: { fontSize: 13, fontWeight: '700', color: '#ffffff' },
 
   // Localização
   locCard: {
     backgroundColor: '#151b23', borderRadius: 16,
     borderWidth: 1, borderColor: '#1f2937',
-    padding: 28, alignItems: 'center', gap: 12, marginBottom: 16,
+    padding: 28, alignItems: 'center', gap: 12,
+    marginTop: 16,
   },
   locTitle:   { fontSize: 18, fontWeight: '700', color: '#ffffff' },
   locSub:     { fontSize: 13, color: '#9ca3af', textAlign: 'center', lineHeight: 20 },
@@ -398,15 +503,4 @@ const styles = StyleSheet.create({
   empty:      { alignItems: 'center', paddingVertical: 48, gap: 10 },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: '#ffffff' },
   emptyText:  { fontSize: 14, color: '#9ca3af', textAlign: 'center' },
-
-  // Raio + Mapa
-  radiusRow:          { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16, position: 'relative', zIndex: 10 },
-  radiusBtn:          { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#1f2937', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 9, borderWidth: 1, borderColor: '#374151' },
-  radiusBtnText:      { fontSize: 14, fontWeight: '600', color: '#9ca3af' },
-  radiusPicker:       { position: 'absolute', top: 44, left: 0, backgroundColor: '#1f2937', borderRadius: 12, borderWidth: 1, borderColor: '#374151', zIndex: 99 },
-  radiusOption:       { paddingHorizontal: 24, paddingVertical: 12 },
-  radiusOptionActive: { backgroundColor: '#2563eb' },
-  radiusOptionText:   { fontSize: 14, fontWeight: '600', color: '#9ca3af' },
-  mapBtn:             { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#2563eb', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 9 },
-  mapBtnText:         { fontSize: 14, fontWeight: '700', color: '#ffffff' },
 });

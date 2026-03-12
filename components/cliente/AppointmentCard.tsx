@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Badge } from '@/components/ui/Badge';
 
-type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
+type AppointmentStatus = 'scheduled' | 'confirmed' | 'completed' | 'cancelled';
 
 interface ClientAppointmentCardProps {
   appointment: {
@@ -20,14 +20,14 @@ interface ClientAppointmentCardProps {
 }
 
 const STATUS_MAP: Record<AppointmentStatus, { label: string; variant: any }> = {
-  pending:   { label: 'Pendente',   variant: 'warning' },
-  confirmed: { label: 'Confirmado', variant: 'info'    },
-  completed: { label: 'Concluído',  variant: 'success' },
+  scheduled: { label: 'Agendado',   variant: 'info'    },
+  confirmed: { label: 'Confirmado', variant: 'success' },
+  completed: { label: 'Concluído',  variant: 'gray'    },
   cancelled: { label: 'Cancelado',  variant: 'error'   },
 };
 
 export function AppointmentCard({ appointment: a, onCancel, onPress }: ClientAppointmentCardProps) {
-  const status = STATUS_MAP[a.status];
+  const status = STATUS_MAP[a.status] ?? STATUS_MAP['scheduled'];
   const date   = new Date(a.date);
 
   return (
@@ -48,7 +48,7 @@ export function AppointmentCard({ appointment: a, onCancel, onPress }: ClientApp
         <Badge label={status.label} variant={status.variant} />
       </View>
 
-      {/* Meio: data/hora/barbeiro/duração */}
+      {/* Meio: data/hora/barbeiro */}
       <View style={styles.meta}>
         <View style={styles.metaItem}>
           <Ionicons name="calendar-outline" size={14} color={'#9ca3af'} />
@@ -69,7 +69,7 @@ export function AppointmentCard({ appointment: a, onCancel, onPress }: ClientApp
       {/* Rodapé: preço + cancelar */}
       <View style={styles.footer}>
         <Text style={styles.price}>R$ {Number(a.service.price).toFixed(2)}</Text>
-        {!!onCancel && (a.status === 'pending' || a.status === 'confirmed') && (
+        {!!onCancel && (a.status === 'scheduled' || a.status === 'confirmed') && (
           <TouchableOpacity
             style={styles.cancelBtn}
             onPress={() => onCancel(a.id)}
@@ -85,10 +85,10 @@ export function AppointmentCard({ appointment: a, onCancel, onPress }: ClientApp
 const styles = StyleSheet.create({
   card: {
     backgroundColor: '#151b23', borderRadius: 16,
-    padding: 16, 
+    padding: 16,
     borderWidth: 1, borderColor: '#1f2937', gap: 12,
   },
-  top:     { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  top:      { flexDirection: 'row', alignItems: 'center', gap: 10 },
   shopIcon: {
     width: 40, height: 40, borderRadius: 10,
     backgroundColor: 'rgba(37,99,235,0.15)', alignItems: 'center', justifyContent: 'center',
